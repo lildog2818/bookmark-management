@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { signOut } from "next-auth/react"
-import { FolderPlus, Plus, Search, LogOut, Bookmark, Folder as FolderIcon, ChevronRight, ChevronDown, MoreHorizontal } from "lucide-react"
+import { FolderPlus, Plus, Search, LogOut, Bookmark, Folder as FolderIcon, ChevronRight, ChevronDown, Upload } from "lucide-react"
 
 interface Folder {
   id: string
@@ -36,6 +36,9 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const [showFolderInput, setShowFolderInput] = useState(false)
   const [newFolderName, setNewFolderName] = useState("")
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const filteredBookmarks = bookmarks.filter((b) => {
     const matchFolder = selectedFolderId ? b.folderId === selectedFolderId : true
@@ -95,6 +98,40 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
       // ignore
     }
   }, [selectedFolderId])
+
+  const handleImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImporting(true)
+    setImportResult(null)
+
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      const res = await fetch("/api/bookmarks/import", {
+        method: "POST",
+        body: formData,
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setImportResult(`✅ 成功导入 ${data.foldersCreated} 个文件夹和 ${data.bookmarksCreated} 个书签`)
+        // 刷新页面数据
+        const [foldersRes, bookmarksRes] = await Promise.all([
+          fetch("/api/folders"),
+          fetch("/api/bookmarks"),
+        ])
+        if (foldersRes.ok) setFolders(await foldersRes.json())
+        if (bookmarksRes.ok) setBookmarks(await bookmarksRes.json())
+      } else {
+        setImportResult(`❌ 导入失败：${data.error}`)
+      }
+    } catch {
+      setImportResult("❌ 导入失败，请检查文件格式")
+    } finally {
+      setImporting(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }, [])
 
   function renderFolderTree(folderList: Folder[], depth = 0) {
     return folderList.map((folder) => {
@@ -217,7 +254,34 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             <Plus className="h-4 w-4" />
             新建书签
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".html,.htm"
+            onChange={handleImport}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="flex items-center gap-1.5 rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50"
+          >
+            <Upload className="h-4 w-4" />
+            {importing ? "导入中..." : "导入"}
+          </button>
         </header>
+
+        {importResult && (
+          <div className="border-b px-6 py-2 text-sm">
+            {importResult}
+            <button
+              onClick={() => setImportResult(null)}
+              className="ml-2 text-muted-foreground hover:text-foreground"
+            >
+              关闭
+            </button>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto p-6">
           {filteredBookmarks.length === 0 ? (
@@ -225,7 +289,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
               <div className="text-center">
                 <Bookmark className="mx-auto h-12 w-12 text-muted-foreground/50" />
                 <p className="mt-4 text-muted-foreground">
-                  {searchQuery ? "没有找到匹配的书签" : "还没有书签，点击上方按钮添加"}
+                  {searchQuery ? "没有找到匹配的书签" : "还没有书签，点击上方按钮添加或导入浏览器书签"}
                 </p>
               </div>
             </div>
