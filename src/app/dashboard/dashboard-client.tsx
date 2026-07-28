@@ -76,10 +76,23 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     try { await fetch("/api/bookmarks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); setBookmarks((prev) => prev.filter((b) => b.id !== id)) } catch {}
   }, [])
 
+  const getDescendantIds = (parentId: string): string[] => {
+    const ids: string[] = []
+    const children = childFoldersMap.get(parentId) || []
+    for (const child of children) {
+      ids.push(child.id)
+      ids.push(...getDescendantIds(child.id))
+    }
+    return ids
+  }
+
   const deleteFolder = useCallback(async (id: string, e: React.MouseEvent) => {
     e.stopPropagation(); if (!confirm("确认删除这个文件夹及其所有书签？")) return
     try {
-      await fetch("/api/folders", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
+      const allIds = [id, ...getDescendantIds(id)]
+      await Promise.all(allIds.map((fid) =>
+        fetch("/api/folders", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: fid }) })
+      ))
       const fRes = await fetch("/api/folders"); if (fRes.ok) setFolders(await fRes.json())
       const bRes = await fetch("/api/bookmarks"); if (bRes.ok) setBookmarks(await bRes.json())
     } catch {}
