@@ -470,7 +470,7 @@ function renderTreeSidebar() {
         </div>
         <div className="grid gap-2">
           <Label htmlFor="folderSelect">文件夹</Label>
-          <Select value={bmFormFolderId ?? ""} onValueChange={(v) => setBmFormFolderId(v || null)}><SelectTrigger className="w-full bg-muted/50 text-foreground"><SelectValue placeholder="未分类" /></SelectTrigger><SelectContent><SelectItem value="">未分类</SelectItem>{folders.filter((f) => !f.parentId).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0)).map((f) => (<SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>))}</SelectContent></Select>
+          <Select value={bmFormFolderId ?? ""} onValueChange={(v) => setBmFormFolderId(v || null)}><SelectTrigger className="w-full bg-muted/50 text-foreground">{bmFormFolderId ? <span>{folders.find((f) => f.id === bmFormFolderId)?.name || bmFormFolderId}</span> : <span className="text-muted-foreground">未分类</span>}</SelectTrigger><SelectContent><SelectItem value="">未分类</SelectItem>{folders.filter((f) => !f.parentId).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0)).map((f) => (<SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>))}</SelectContent></Select>
         </div>
       </div>
       <DialogFooter>
@@ -517,7 +517,7 @@ function renderTreeSidebar() {
         </div>
         <div className="grid gap-2">
           <Label htmlFor="editFolderSelect">文件夹</Label>
-          <Select value={bmFormFolderId ?? ""} onValueChange={(v) => setBmFormFolderId(v || null)}><SelectTrigger className="w-full bg-muted/50 text-foreground"><SelectValue placeholder="未分类" /></SelectTrigger><SelectContent><SelectItem value="">未分类</SelectItem>{folders.filter((f) => !f.parentId).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0)).map((f) => (<SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>))}</SelectContent></Select>
+          <Select value={bmFormFolderId ?? ""} onValueChange={(v) => setBmFormFolderId(v || null)}><SelectTrigger className="w-full bg-muted/50 text-foreground">{bmFormFolderId ? <span>{folders.find((f) => f.id === bmFormFolderId)?.name || bmFormFolderId}</span> : <span className="text-muted-foreground">未分类</span>}</SelectTrigger><SelectContent><SelectItem value="">未分类</SelectItem>{folders.filter((f) => !f.parentId).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0)).map((f) => (<SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>))}</SelectContent></Select>
         </div>
       </div>
       <DialogFooter>
