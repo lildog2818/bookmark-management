@@ -223,8 +223,8 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
         <div {...(!selectMode ? { draggable: true, onDragStart: () => { draggedBmRef.current = bm.id; (window as any).__dragSrcFolder = bm.folderId }, onDragOver: (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = "move" }, onDrop: (e: React.DragEvent) => { e.stopPropagation(); const srcId = draggedBmRef.current; const srcFolder = (window as any).__dragSrcFolder; if (!srcId || srcId === bm.id || srcFolder !== bm.folderId) return; setBookmarks((prev) => { const fb = prev.filter((x) => x.folderId === bm.folderId); const si = fb.findIndex((x) => x.id === srcId); const di = fb.findIndex((x) => x.id === bm.id); if (si < 0 || di < 0) return prev; const item = prev.find((x) => x.id === srcId)!; fb.splice(si, 1); fb.splice(di, 0, item); handleReorder(bm.folderId, fb.map((x) => x.id)); return prev.map((x) => ({ ...x, order: fb.findIndex((y) => y.id === x.id) })) }); draggedBmRef.current = null; setDragOverFolderId(null) }, onDragEnd: () => { draggedBmRef.current = null; setDragOverFolderId(null) } } : {})} className="flex flex-1 cursor-pointer items-center min-w-0" onClick={() => { if (!selectMode) window.open(bm.url, "_blank") }}>
           <span className="truncate text-sm font-medium">{bm.title || bm.url}</span>
         </div>
-        {!selectMode && (<><button onClick={(e) => { e.stopPropagation(); openEditBookmark(bm) }} className="shrink-0 p-1.5 text-muted-foreground/40 opacity-60 hover:text-foreground hover:opacity-100"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button>
-        <button onClick={(e) => handleDeleteBookmark(bm.id, e)} className="shrink-0 p-1.5 text-muted-foreground/40 opacity-60 hover:text-destructive hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button></>)}
+        {!selectMode && (<><button onClick={(e) => { e.stopPropagation(); openEditBookmark(bm) }} className="shrink-0 p-1.5 text-muted-foreground/40 opacity-100 hover:text-foreground"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button>
+        <button onClick={(e) => handleDeleteBookmark(bm.id, e)} className="shrink-0 p-1.5 text-muted-foreground/40 opacity-100 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button></>)}
       </div>
     )
   }
@@ -238,7 +238,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
           <div {...dragProps(f.id)} className={`group flex items-center gap-1 px-3 py-1.5 ${isOver(f.id) ? "bg-primary/10" : ""}`}>
             <button onClick={() => toggleCollapse(f.id)} className="p-0.5 text-muted-foreground/60 hover:text-foreground">{isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}</button>
             <FolderIcon className="h-4 w-4 shrink-0" style={{ color: f.color || undefined }} /><span className="text-sm text-muted-foreground">{f.name}</span><span className="text-xs text-muted-foreground/40">{bms.length}</span>
-            <button onClick={(e) => { e.stopPropagation(); openEditFolder(f) }} className="p-1 text-muted-foreground/30 opacity-60 hover:text-foreground hover:opacity-100" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(f.id, e)} className="ml-auto p-1 text-muted-foreground/30 opacity-60 hover:text-destructive hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>
+            <button onClick={(e) => { e.stopPropagation(); openEditFolder(f) }} className="p-1 text-muted-foreground/30 opacity-100 hover:text-foreground" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(f.id, e)} className="ml-auto p-1 text-muted-foreground/30 opacity-100 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
           </div>
           {!isCollapsed && (<div className="ml-4 pl-2" style={{ borderLeft: "1px solid var(--border)" }}>{bms.map(renderBookmarkRow)}{renderSubFoldersInCard(f.id, depth + 1)}</div>)}
         </div>
@@ -262,7 +262,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     return (
       <div className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
         {selectMode && (
-          <div className="mb-4 flex items-center gap-3 px-4 py-2.5 bg-muted/50" style={{ border: "1px solid var(--border)" }}>
+          <div className="mb-4 flex items-center gap-3 px-4 py-2.5 bg-muted/50" style={{ border: "1px solid var(--border)", breakInside: "avoid-column", marginBottom: "1.25rem" }}>
             <button onClick={() => { setSelectedBmIds(new Set()); setSelectMode(false) }} className="text-xs text-muted-foreground hover:text-foreground">取消</button>
             <span className="text-xs text-muted-foreground">已选 {selectedBmIds.size} 项</span>
             <div className="ml-auto flex gap-2">
@@ -271,7 +271,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             </div>
           </div>
         )}
-        <div className="flex flex-wrap -mx-2.5">
+        <div className="px-4 py-6 lg:px-8" style={{ columnCount: 3, columnGap: "1.25rem" }}>
           {allCards.map((card, ci) => {
             const isFolder = card.type === "folder"
             const cardId = isFolder ? card.data.id : "__root__"
@@ -279,8 +279,8 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             return (
               <div key={isFolder ? card.data.id : "root"}
                         {...dragProps(cardId)}
-                className={`bg-card transition-shadow ${isOver(cardId) ? "ring-2 ring-primary" : ""} ${isFolder ? "cursor-grab active:cursor-grabbing" : ""} w-full sm:w-[calc(50%-20px)] lg:w-[calc(33.333%-20px)] px-2.5 mb-5`}
-                style={{ border: "1px solid var(--border)" }}>
+                className={`bg-card transition-shadow ${isOver(cardId) ? "ring-2 ring-primary" : ""} ${isFolder ? "cursor-grab active:cursor-grabbing" : ""}`}
+                style={{ border: "1px solid var(--border)", breakInside: "avoid-column", marginBottom: "1.25rem" }}>
                 {card.type === "root" ? (
                   <><div className="flex items-center gap-2 px-4 pt-3 pb-2 cursor-pointer hover:bg-muted/20" onClick={() => setCollapsedCards((prev) => { const n = new Set(prev); n.has("__root__") ? n.delete("__root__") : n.add("__root__"); return n })} style={{ borderBottom: isCollapsed ? "none" : "1px solid var(--border)" }}>
                     <button onClick={(e) => { e.stopPropagation(); setCollapsedCards((prev) => { const n = new Set(prev); n.has("__root__") ? n.delete("__root__") : n.add("__root__"); return n }) }} className="p-0.5 text-muted-foreground/50 hover:text-foreground">{isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</button><Bookmark className="h-4 w-4 text-muted-foreground/50" /><span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">未分类</span><span className="ml-auto text-xs text-muted-foreground/40">{card.data.length}</span>
@@ -294,7 +294,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
                     <FolderIcon className="h-4 w-4 shrink-0" style={{ color: card.data.color || undefined }} />
                     <span className="text-sm font-semibold">{card.data.name}</span>
                     {(filteredBookmarksByFolder.get(card.data.id)?.length || 0) > 0 && <span className="text-xs text-muted-foreground/40">{filteredBookmarksByFolder.get(card.data.id)?.length}</span>}
-                    <button onClick={(e) => { e.stopPropagation(); openEditFolder(card.data) }} className="p-1 text-muted-foreground/30 opacity-60 hover:text-foreground hover:opacity-100" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(card.data.id, e)} className="p-1 text-muted-foreground/30 opacity-60 hover:text-destructive hover:opacity-100" title="删除"><Trash2 className="h-3.5 w-3.5" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); openEditFolder(card.data) }} className="p-1 text-muted-foreground/30 opacity-100 hover:text-foreground" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(card.data.id, e)} className="p-1 text-muted-foreground/30 opacity-100 hover:text-destructive" title="删除"><Trash2 className="h-3.5 w-3.5" /></button>
                   </div>
                   {!isCollapsed && (<div className="pb-1">{(() => { const bms = filteredBookmarksByFolder.get(card.data.id) || []; const subs = childFoldersMap.get(card.data.id) || []; const hasSub = subs.some((sf) => { const sfb = filteredBookmarksByFolder.get(sf.id) || []; return sfb.length > 0 || (childFoldersMap.get(sf.id) || []).length > 0 }); if (bms.length === 0 && !hasSub) return <p className="px-4 py-6 text-xs text-muted-foreground/40">空文件夹</p>; return <>{bms.map(renderBookmarkRow)}{renderSubFoldersInCard(card.data.id)}</> })()}</div>)}
                   </>)}
@@ -317,7 +317,7 @@ function renderTreeSidebar() {
             <FolderIcon className="h-4 w-4 shrink-0" style={{ color: f.color || undefined }} /><span className="truncate">{f.name}</span>
             {(bookmarksByFolder.get(f.id)?.length || 0) > 0 && <span className="ml-auto text-xs text-muted-foreground/40">{bookmarksByFolder.get(f.id)?.length}</span>}
           </button>
-          <button onClick={(e) => { e.stopPropagation(); openEditFolder(f) }} className="p-1 text-muted-foreground/30 opacity-60 hover:text-foreground hover:opacity-100" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(f.id, e)} className="shrink-0 p-1.5 text-muted-foreground/30 opacity-60 hover:text-destructive hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>
+          <button onClick={(e) => { e.stopPropagation(); openEditFolder(f) }} className="p-1 text-muted-foreground/30 opacity-100 hover:text-foreground" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(f.id, e)} className="shrink-0 p-1.5 text-muted-foreground/30 opacity-100 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
         </div></div>
         {isExpanded && children.length > 0 && <div>{renderTree(children, depth + 1)}</div>}</div>)
     })
@@ -345,12 +345,12 @@ function renderTreeSidebar() {
           ) : (<div className="mx-auto max-w-7xl"><div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {display.map((bm) => (
               <div key={bm.id} draggable onDragStart={() => { draggedBmRef.current = bm.id }} onDragEnd={() => { draggedBmRef.current = null; setDragOverFolderId(null) }}
-                onClick={() => { if (!selectMode) window.open(bm.url, "_blank") }} className="group relative cursor-pointer bg-card p-4 hover:bg-muted/30 cursor-grab active:cursor-grabbing" style={{ border: "1px solid var(--border)" }}>
+                onClick={() => { if (!selectMode) window.open(bm.url, "_blank") }} className="group relative cursor-pointer bg-card p-4 hover:bg-muted/30 cursor-grab active:cursor-grabbing" style={{ border: "1px solid var(--border)", breakInside: "avoid-column", marginBottom: "1.25rem" }}>
                 <div className="flex items-start gap-3">
                   {bm.favicon ? <img src={bm.favicon} alt="" className="mt-0.5 h-5 w-5" /> : <Bookmark className="mt-0.5 h-5 w-5 shrink-0 text-primary/60" />}
                   <div className="min-w-0 flex-1"><h3 className="truncate text-sm font-medium">{bm.title || bm.url}</h3><p className="mt-0.5 truncate text-xs text-muted-foreground">{bm.url}</p></div>
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); handleDeleteBookmark(bm.id, e) }} className="absolute right-2 top-2 p-1 text-muted-foreground/30 opacity-60 hover:text-destructive hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>
+                <div className="absolute right-2 top-2 flex gap-1"><button onClick={(e) => { e.stopPropagation(); openEditBookmark(bm) }} className="p-1 text-muted-foreground/30 opacity-100 hover:text-foreground"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => { e.stopPropagation(); handleDeleteBookmark(bm.id, e) }} className="p-1 text-muted-foreground/30 opacity-100 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button></div>
               </div>
             ))}
           </div></div>)}
@@ -379,7 +379,7 @@ function renderTreeSidebar() {
           <input ref={fileInputRef} type="file" accept=".html,.htm" onChange={handleImport} className="hidden" />
           <button onClick={() => fileInputRef.current?.click()} disabled={importing} className="px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50"><Upload className="h-3.5 w-3.5" /></button>
           <div className="relative group"><button className="px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted"><Download className="h-3.5 w-3.5" /></button>
-            <div className="absolute right-0 top-full z-50 mt-1 hidden w-28 bg-card py-1 shadow group-hover:block" style={{ border: "1px solid var(--border)" }}>
+            <div className="absolute right-0 top-full z-50 mt-1 hidden w-28 bg-card py-1 shadow group-hover:block" style={{ border: "1px solid var(--border)", breakInside: "avoid-column", marginBottom: "1.25rem" }}>
               <a href="/api/bookmarks/export?format=html" className="block px-3 py-1.5 text-xs hover:bg-muted">导出 HTML</a>
               <a href="/api/bookmarks/export?format=json" className="block px-3 py-1.5 text-xs hover:bg-muted">导出 JSON</a></div></div>
           <Tooltip><TooltipTrigger onClick={handleDetectDuplicates} disabled={dedupLoading} className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50 transition-colors">{dedupLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Scan className="h-3.5 w-3.5" />}<span className="hidden sm:inline">去重</span></TooltipTrigger><TooltipContent>检测并清理重复书签</TooltipContent></Tooltip>
@@ -542,6 +542,11 @@ function renderTreeSidebar() {
     </div>
   )
 }
+
+
+
+
+
 
 
 
