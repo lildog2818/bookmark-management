@@ -1,123 +1,139 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import { useTheme } from "@/lib/theme"
+
+interface FlowPath {
+  points: { x: number; y: number }[]
+  phase: number
+}
 
 interface Particle {
-  x: number; y: number
-  vx: number; vy: number
-  size: number; alpha: number
-  life: number; maxLife: number
+  pathIdx: number
+  t: number
+  speed: number
+  size: number
+  alpha: number
 }
 
 export function ParticlesBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const pathsRef = useRef<FlowPath[]>([])
   const particlesRef = useRef<Particle[]>([])
-  const mouseRef = useRef({ x: -1000, y: -1000 })
   const animRef = useRef<number>(0)
-  const { theme } = useTheme()
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
+    const canvas = canvasRef.current!
+    const ctx = canvas.getContext("2d")!
 
+    function buildPaths(w: number, h: number): FlowPath[] {
+      const paths: FlowPath[] = []
+      for (let i = 0; i < 8; i++) {
+        const pts: { x: number; y: number }[] = []
+        const startY = (h / 9) * (i + 1)
+        const amp = 40 + Math.sin(i * 1.7) * 25
+        const freq = 0.004 + (i % 3) * 0.001
+        for (let j = 0; j <= 120; j++) {
+          const t = j / 120
+          const x = t * w * 1.2 - w * 0.1
+          const wave1 = Math.sin(x * freq + i * 1.2) * amp
+          const wave2 = Math.sin(x * freq * 0.7 + i * 0.9) * amp * 0.5
+          pts.push({ x, y: startY + wave1 + wave2 })
+        }
+        paths.push({ points: pts, phase: i * 0.3 })
+      }
+      for (let i = 0; i < 5; i++) {
+        const pts: { x: number; y: number }[] = []
+        const startX = (w / 6) * (i + 1) + (Math.random() - 0.5) * 60
+        for (let j = 0; j <= 80; j++) {
+          const t = j / 80
+          const y = t * h * 1.1 - h * 0.05
+          const drift = Math.sin(t * Math.PI * 3 + i) * 30
+          pts.push({ x: startX + drift, y })
+        }
+        paths.push({ points: pts, phase: i * 0.5 })
+      }
+      return paths
+    }
+
+    function spawnParticles(paths: FlowPath[], count: number): Particle[] {
+      const arr: Particle[] = []
+      for (let i = 0; i < count; i++) {
+        arr.push({
+          pathIdx: Math.floor(Math.random() * paths.length),
+          t: Math.random(),
+          speed: 0.0006 + Math.random() * 0.0012,
+          size: 0.5 + Math.random() * 1.2,
+          alpha: 0.2 + Math.random() * 0.6,
+        })
+      }
+      return arr
+    }
+
+    function getPathPos(path: FlowPath, t: number) {
+      const len = path.points.length
+      const idx = t * (len - 1)
+      const i0 = Math.floor(idx)
+      const i1 = Math.min(i0 + 1, len - 1)
+      const frac = idx - i0
+      return {
+        x: path.points[i0].x + (path.points[i1].x - path.points[i0].x) * frac,
+        y: path.points[i0].y + (path.points[i1].y - path.points[i0].y) * frac,
+      }
+    }
+
+    let frame = 0
     const resize = () => {
       canvas.width = window.innerWidth
       canvas.height = window.innerHeight
+      pathsRef.current = buildPaths(canvas.width, canvas.height)
+      particlesRef.current = spawnParticles(pathsRef.current, 600)
     }
     resize()
     window.addEventListener("resize", resize)
 
-    const onMouse = (e: MouseEvent) => {
-      mouseRef.current.x = e.clientX
-      mouseRef.current.y = e.clientY
-    }
-    window.addEventListener("mousemove", onMouse)
-    window.addEventListener("mouseleave", () => {
-      mouseRef.current.x = -1000; mouseRef.current.y = -1000
-    })
-
-    const isDark = theme === "dark"
-
-    const spawn = (count: number) => {
-      const w = canvas.width; const h = canvas.height
-      for (let i = 0; i < count; i++) {
-        particlesRef.current.push({
-          x: Math.random() * w, y: Math.random() * h,
-          vx: (Math.random() - 0.5) * 0.4,
-          vy: (Math.random() - 0.5) * 0.4 - 0.15,
-          size: Math.random() * 2.5 + 1,
-          alpha: Math.random() * 0.5 + 0.15,
-          life: 0, maxLife: Math.random() * 300 + 200,
-        })
-      }
-    }
-    spawn(80)
-
     const animate = () => {
-      ctx!.clearRect(0, 0, canvas!.width, canvas!.height)
-      const w = canvas!.width; const h = canvas!.height
-      const part = particlesRef.current
-      const mx = mouseRef.current.x; const my = mouseRef.current.y
+      frame++
+      const w = canvas.width; const h = canvas.height
+      ctx.clearRect(0, 0, w, h)
+      const paths = pathsRef.current
+      const particles = particlesRef.current
 
-      for (let i = part.length - 1; i >= 0; i--) {
-        const p = part[i]
-        p.x += p.vx; p.y += p.vy
-        p.life++
-        p.alpha = Math.max(0, p.alpha - 0.001)
-
-        const dx = p.x - mx; const dy = p.y - my
-        const dist = Math.sqrt(dx * dx + dy * dy)
-        if (dist < 120) {
-          const force = (120 - dist) / 120 * 0.8
-          p.vx += (dx / dist) * force * 0.05
-          p.vy += (dy / dist) * force * 0.05
+      for (let pi = 0; pi < paths.length; pi++) {
+        const path = paths[pi]; const pts = path.points
+        if (pts.length < 2) continue
+        for (let i = 0; i < pts.length - 2; i += 2) {
+          const t0 = i / (pts.length - 1)
+          const alpha = 0.03 + Math.sin(t0 * Math.PI * 2 + path.phase + frame * 0.002) * 0.025
+          if (alpha <= 0) continue
+          ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[i+2].x, pts[i+2].y)
+          ctx.strokeStyle = "rgba(255,255,255," + Math.max(0, alpha).toFixed(3) + ")"
+          ctx.lineWidth = 0.6; ctx.stroke()
         }
-
-        p.vx *= 0.99; p.vy *= 0.99
-
-        if (p.x < -20) p.x = w + 20
-        if (p.x > w + 20) p.x = -20
-        if (p.y < -20) p.y = h + 20
-        if (p.y > h + 20) p.y = -20
-
-        if (p.life > p.maxLife || p.alpha <= 0) {
-          p.x = Math.random() * w
-          p.y = h + 10
-          p.vx = (Math.random() - 0.5) * 0.4
-          p.vy = (Math.random() - 0.5) * 0.4 - 0.15
-          p.alpha = Math.random() * 0.5 + 0.15
-          p.life = 0
-          p.maxLife = Math.random() * 300 + 200
+        for (let i = 0; i < pts.length - 1; i++) {
+          const alpha = 0.08 + Math.sin(i * 0.05 - frame * 0.008 + path.phase) * 0.06
+          if (alpha <= 0) continue
+          ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[i+1].x, pts[i+1].y)
+          ctx.strokeStyle = "rgba(255,255,255," + Math.max(0, alpha).toFixed(3) + ")"
+          ctx.lineWidth = 0.3; ctx.stroke()
         }
-
-        ctx!.beginPath()
-        ctx!.arc(p.x, p.y, p.size, 0, Math.PI * 2)
-        ctx!.fillStyle = isDark
-          ? "rgba(148, 163, 184, " + p.alpha + ")"
-          : "rgba(59, 130, 246, " + p.alpha * 0.6 + ")"
-        ctx!.fill()
       }
 
-      for (let i = 0; i < part.length; i++) {
-        for (let j = i + 1; j < part.length; j++) {
-          const dx = part[i].x - part[j].x
-          const dy = part[i].y - part[j].y
-          const dist2 = Math.sqrt(dx * dx + dy * dy)
-          if (dist2 < 100) {
-            ctx!.beginPath()
-            ctx!.moveTo(part[i].x, part[i].y)
-            ctx!.lineTo(part[j].x, part[j].y)
-            const alpha = (1 - dist2 / 100) * 0.15
-            ctx!.strokeStyle = isDark
-              ? "rgba(148, 163, 184, " + alpha + ")"
-              : "rgba(59, 130, 246, " + alpha * 0.5 + ")"
-            ctx!.lineWidth = 0.5
-            ctx!.stroke()
-          }
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i]; const path = paths[p.pathIdx]
+        if (!path || path.points.length < 2) continue
+        p.t += p.speed
+        if (p.t >= 1) {
+          p.t = 0; p.pathIdx = Math.floor(Math.random() * paths.length)
+          p.speed = 0.0006 + Math.random() * 0.0012
+          p.size = 0.5 + Math.random() * 1.2
+          p.alpha = 0.2 + Math.random() * 0.6
         }
+        const pos = getPathPos(path, p.t)
+        const flicker = 0.7 + Math.sin(frame * 0.05 + i) * 0.3
+        const a = Math.min(1, p.alpha * flicker)
+        ctx.beginPath(); ctx.arc(pos.x, pos.y, p.size, 0, Math.PI * 2)
+        ctx.fillStyle = "rgba(255,255,255," + a.toFixed(3) + ")"
+        ctx.fill()
       }
 
       animRef.current = requestAnimationFrame(animate)
@@ -127,15 +143,8 @@ export function ParticlesBackground() {
     return () => {
       cancelAnimationFrame(animRef.current)
       window.removeEventListener("resize", resize)
-      window.removeEventListener("mousemove", onMouse)
     }
-  }, [theme])
+  }, [])
 
-  return (
-    <canvas
-      ref={canvasRef}
-      className="fixed inset-0 pointer-events-none z-0"
-      style={{ opacity: 0.6 }}
-    />
-  )
+  return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-0" />
 }
