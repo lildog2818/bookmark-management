@@ -1,149 +1,108 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useRef } from "react"
 
-interface FlowPath {
-  points: { x: number; y: number }[]
-  phase: number
-}
-
 interface Particle {
-  pathIdx: number
-  t: number
-  speed: number
-  size: number
-  alpha: number
+  x: number; y: number
+  vx: number; vy: number
+  size: number; alpha: number
+  phase: number
 }
 
 export function ParticlesBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const pathsRef = useRef<FlowPath[]>([])
   const particlesRef = useRef<Particle[]>([])
   const animRef = useRef<number>(0)
 
   useEffect(() => {
     const canvas = canvasRef.current!
     const ctx = canvas.getContext("2d")!
+    let w = 0, h = 0, frame = 0
 
-    function buildPaths(w: number, h: number): FlowPath[] {
-      const paths: FlowPath[] = []
-      for (let i = 0; i < 8; i++) {
-        const pts: { x: number; y: number }[] = []
-        const startY = h * 0.05 + (i / 8) * h * 0.7
-        const amp = 40 + Math.sin(i * 1.7) * 25
-        const freq = 0.004 + (i % 3) * 0.001
-        for (let j = 0; j <= 120; j++) {
-          const t = j / 120
-          const x = w * 0.85 - t * w * 0.85 + h * 0.08
-          const wave1 = Math.sin(x * freq + i * 1.2) * amp
-          const wave2 = Math.sin(x * freq * 0.7 + i * 0.9) * amp * 0.5
-          pts.push({ x, y: startY + t * h * 0.35 + wave1 * 0.6 + wave2 * 0.3 })
-        }
-        paths.push({ points: pts, phase: i * 0.3 })
-      }
-      for (let i = 0; i < 5; i++) {
-        const pts: { x: number; y: number }[] = []
-        const startX = w * 0.75 - (i / 5) * w * 0.5
-        for (let j = 0; j <= 80; j++) {
-          const t = j / 80
-          const y = h * 0.05 + t * h * 0.7
-          const drift = Math.sin(t * Math.PI * 3 + i) * 30
-          pts.push({ x: startX - t * w * 0.5 + drift * 0.5, y })
-        }
-        paths.push({ points: pts, phase: i * 0.5 })
-      }
-      return paths
-    }
-
-    function spawnParticles(paths: FlowPath[], count: number): Particle[] {
+    function spawn(count: number) {
       const arr: Particle[] = []
       for (let i = 0; i < count; i++) {
         arr.push({
-          pathIdx: Math.floor(Math.random() * paths.length),
-          t: Math.random(),
-          speed: 0.0003 + Math.random() * 0.0006,
-          size: 1.0 + Math.random() * 2.0,
-          alpha: 0.2 + Math.random() * 0.6,
+          x: Math.random() * w * 1.2 - w * 0.1,
+          y: Math.random() * h * 1.1 - h * 0.05,
+          vx: -(0.08 + Math.random() * 0.15),
+          vy: 0.04 + Math.random() * 0.12,
+          size: 1.2 + Math.random() * 2.0,
+          alpha: 0.15 + Math.random() * 0.5,
+          phase: Math.random() * Math.PI * 2,
         })
       }
       return arr
     }
 
-    function getPathPos(path: FlowPath, t: number) {
-      const len = path.points.length
-      const idx = t * (len - 1)
-      const i0 = Math.floor(idx)
-      const i1 = Math.min(i0 + 1, len - 1)
-      const frac = idx - i0
-      return {
-        x: path.points[i0].x + (path.points[i1].x - path.points[i0].x) * frac,
-        y: path.points[i0].y + (path.points[i1].y - path.points[i0].y) * frac,
-      }
-    }
-
-    let frame = 0
     const resize = () => {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
-      pathsRef.current = buildPaths(canvas.width, canvas.height)
-      particlesRef.current = spawnParticles(pathsRef.current, 600)
+      w = canvas.width = window.innerWidth
+      h = canvas.height = window.innerHeight
+      particlesRef.current = spawn(400)
     }
     resize()
     window.addEventListener("resize", resize)
-
     const animate = () => {
-      frame++
-      const w = canvas.width; const h = canvas.height
-      ctx.clearRect(0, 0, w, h)
-      const paths = pathsRef.current
-      const particles = particlesRef.current
+      frame++; ctx.clearRect(0, 0, w, h)
+      const pts = particlesRef.current
 
-      for (let pi = 0; pi < paths.length; pi++) {
-        const path = paths[pi]; const pts = path.points
-        if (pts.length < 2) continue
-        for (let i = 0; i < pts.length - 2; i += 2) {
-          const t0 = i / (pts.length - 1)
-          const alpha = 0.03 + Math.sin(t0 * Math.PI * 2 + path.phase + frame * 0.002) * 0.025
-          if (alpha <= 0) continue
-          ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[i+2].x, pts[i+2].y)
-          ctx.strokeStyle = "rgba(255,255,255," + Math.max(0, alpha).toFixed(3) + ")"
-          ctx.lineWidth = 0.6; ctx.stroke()
+      // Dynamic flow lines drawn fresh each frame
+      for (let li = 0; li < 14; li++) {
+        const baseY = h * 0.06 + (li / 14) * h * 0.82
+        const amp = 20 + Math.sin(li * 0.9) * 12
+        const freq = 0.005 + (li % 4) * 0.001
+        const phaseOff = li * 0.7 + frame * 0.002
+        ctx.beginPath(); let first = true
+        for (let j = 0; j <= 80; j++) {
+          const t = j / 80
+          const x = w * 1.15 - t * w * 1.3
+          const wave = Math.sin(x * freq + phaseOff) * amp + Math.sin(x * freq * 0.5 + phaseOff * 1.3) * amp * 0.4
+          const y = baseY + t * h * 0.3 + wave * 0.5
+          if (first) { ctx.moveTo(x, y); first = false } else ctx.lineTo(x, y)
         }
-        for (let i = 0; i < pts.length - 1; i++) {
-          const alpha = 0.08 + Math.sin(i * 0.05 - frame * 0.008 + path.phase) * 0.06
-          if (alpha <= 0) continue
-          ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[i+1].x, pts[i+1].y)
-          ctx.strokeStyle = "rgba(255,255,255," + Math.max(0, alpha).toFixed(3) + ")"
-          ctx.lineWidth = 0.3; ctx.stroke()
-        }
+        const la = 0.03 + Math.sin(frame * 0.004 + li * 0.8) * 0.025
+        ctx.strokeStyle = "rgba(255,255,255," + Math.max(0.01, la).toFixed(3) + ")"
+        ctx.lineWidth = 0.5; ctx.stroke()
       }
 
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i]; const path = paths[p.pathIdx]
-        if (!path || path.points.length < 2) continue
-        p.t += p.speed
-        if (p.t >= 1) {
-          p.t = 0; p.pathIdx = Math.floor(Math.random() * paths.length)
-          p.speed = 0.0003 + Math.random() * 0.0006
-          p.size = 0.5 + Math.random() * 1.2
-          p.alpha = 0.2 + Math.random() * 0.6
+      // Particles
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i]
+        p.x += p.vx; p.y += p.vy
+        p.x += Math.sin(frame * 0.008 + p.phase + i * 0.1) * 0.15
+        p.y += Math.cos(frame * 0.01 + p.phase + i * 0.07) * 0.1
+        if (p.x < -w * 0.1 || p.y > h * 1.1) {
+          p.x = w * 1.05 + Math.random() * w * 0.1
+          p.y = -h * 0.05 + Math.random() * h * 0.1
+          p.vx = -(0.08 + Math.random() * 0.15)
+          p.vy = 0.04 + Math.random() * 0.12
+          p.alpha = 0.15 + Math.random() * 0.5
+          p.phase = Math.random() * Math.PI * 2
         }
-        const pos = getPathPos(path, p.t)
-        const flicker = 0.7 + Math.sin(frame * 0.05 + i) * 0.3
+        const flicker = 0.75 + Math.sin(frame * 0.04 + i * 0.5) * 0.25
         const a = Math.min(1, p.alpha * flicker)
-        ctx.beginPath(); ctx.arc(pos.x, pos.y, p.size, 0, Math.PI * 2)
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
         ctx.fillStyle = "rgba(255,255,255," + a.toFixed(3) + ")"
         ctx.fill()
       }
 
+      // Connections between nearby particles
+      for (let i = 0; i < pts.length; i += 3) {
+        for (let j = i + 3; j < pts.length; j += 3) {
+          const dx = pts[i].x - pts[j].x
+          const dy = pts[i].y - pts[j].y
+          const dist = Math.sqrt(dx * dx + dy * dy)
+          if (dist < 70) {
+            ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y)
+            ctx.strokeStyle = "rgba(255,255,255," + ((1 - dist / 70) * 0.05).toFixed(3) + ")"
+            ctx.lineWidth = 0.3; ctx.stroke()
+          }
+        }
+      }
       animRef.current = requestAnimationFrame(animate)
     }
     animRef.current = requestAnimationFrame(animate)
-
-    return () => {
-      cancelAnimationFrame(animRef.current)
-      window.removeEventListener("resize", resize)
-    }
+    return () => { cancelAnimationFrame(animRef.current); window.removeEventListener('resize', resize) }
   }, [])
 
   return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none -z-10" />
