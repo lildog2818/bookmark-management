@@ -45,6 +45,7 @@ model Bookmark {
   description String?
   favicon  String?
   order   Int      @default(0)
+  lastUsedAt DateTime?
   userId   String
   folderId String?
 

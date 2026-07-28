@@ -61,7 +61,7 @@ export async function GET() {
 
   const bookmarks = await prisma.bookmark.findMany({
     where: { userId: session.user.id },
-    orderBy: { order: "asc" },
+    orderBy: [{ lastUsedAt: "desc" }, { order: "asc" }],
   })
   return NextResponse.json(bookmarks)
 }
@@ -119,6 +119,7 @@ export async function PATCH(req: Request) {
       data.title = String(title).slice(0, 500)
     }
 
+    data.lastUsedAt = new Date()
     const result = await prisma.bookmark.updateMany({
       where: { id, userId: session.user.id },
       data,

@@ -111,18 +111,18 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   }, [])
 
   const openEditBookmark = useCallback((bm: Bookmark) => {
-    setBmFormUrl(bm.url); setBmFormTitle(bm.title || ""); setEditingBookmark(bm); setShowEditBookmark(true)
+    setBmFormUrl(bm.url); setBmFormTitle(bm.title || ""); setBmFormFolderId(bm.folderId); setEditingBookmark(bm); setShowEditBookmark(true)
   }, [])
 
   const confirmEditBookmark = useCallback(async () => {
     if (!editingBookmark) return
     const id = editingBookmark.id
     try {
-      const res = await fetch("/api/bookmarks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, title: bmFormTitle.trim(), url: bmFormUrl.trim() }) })
-      if (res.ok) setBookmarks((prev) => prev.map((b) => b.id === id ? { ...b, title: bmFormTitle.trim(), url: bmFormUrl.trim() } : b))
+      const res = await fetch("/api/bookmarks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, title: bmFormTitle.trim(), url: bmFormUrl.trim(), folderId: bmFormFolderId }) })
+      if (res.ok) setBookmarks((prev) => prev.map((b) => b.id === id ? { ...b, title: bmFormTitle.trim(), url: bmFormUrl.trim(), folderId: bmFormFolderId } : b))
     } catch { console.error('API err') }
-    setShowEditBookmark(false); setEditingBookmark(null); setBmFormUrl(""); setBmFormTitle("")
-  }, [editingBookmark, bmFormUrl, bmFormTitle])
+    setShowEditBookmark(false); setEditingBookmark(null); setBmFormUrl(""); setBmFormTitle(""); setBmFormFolderId(null)
+  }, [editingBookmark, bmFormUrl, bmFormTitle, bmFormFolderId])
 
   const handleDeleteBookmark = useCallback(async (id: string, e: React.MouseEvent) => {
     e.stopPropagation(); setDeleteConfirm({ type: "bookmark", id })
@@ -190,7 +190,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     try { const res = await fetch("/api/bookmarks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: bmFormTitle.trim() || null, url: bmFormUrl.trim(), folderId: bmFormFolderId }) })
       if (res.ok) { const bm = await res.json(); setBookmarks((prev) => [...prev, bm]) } } catch { console.error('API err') }
     setShowCreateBookmark(false); setBmFormUrl(""); setBmFormTitle(""); setBmFormFolderId(null)
-  }, [selectedFolderId, bmFormUrl, bmFormTitle])
+  }, [bmFormFolderId, bmFormUrl, bmFormTitle])
   const handleImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return; setImporting(true); setImportResult(null)
     try { const fd = new FormData(); fd.append("file", file); const r = await fetch("/api/bookmarks/import", { method: "POST", body: fd }); const d = await r.json()
@@ -231,7 +231,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   return (
       <div key={bm.id} className={`group flex items-center px-3 py-2 border-b border-border/30 last:border-0 ${isSel ? "bg-primary/5" : "hover:bg-muted/40"}`}>
         {selectMode && (<input type="checkbox" checked={isSel} onChange={() => { setSelectedBmIds((prev) => { const n = new Set(prev); n.has(bm.id) ? n.delete(bm.id) : n.add(bm.id); return n }) }} className="mr-2 shrink-0 accent-primary" />)}
-        <div {...(!selectMode ? { draggable: true, onDragStart: () => { draggedBmRef.current = bm.id; (window as any).__dragSrcFolder = bm.folderId }, onDragOver: (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = "move" }, onDrop: (e: React.DragEvent) => { e.stopPropagation(); const srcId = draggedBmRef.current; const srcFolder = (window as any).__dragSrcFolder; if (!srcId || srcId === bm.id || srcFolder !== bm.folderId) return; setBookmarks((prev) => { const fb = prev.filter((x) => x.folderId === bm.folderId); const si = fb.findIndex((x) => x.id === srcId); const di = fb.findIndex((x) => x.id === bm.id); if (si < 0 || di < 0) return prev; const item = prev.find((x) => x.id === srcId)!; fb.splice(si, 1); fb.splice(di, 0, item); handleReorder(bm.folderId, fb.map((x) => x.id)); return prev.map((x) => ({ ...x, order: fb.findIndex((y) => y.id === x.id) })) }); draggedBmRef.current = null; setDragOverFolderId(null) }, onDragEnd: () => { draggedBmRef.current = null; setDragOverFolderId(null) } } : {})} className="flex flex-1 cursor-pointer items-center min-w-0" onClick={() => { if (!selectMode) window.open(bm.url, "_blank", "noopener,noreferrer") }}>
+        <div {...(!selectMode ? { draggable: true, onDragStart: () => { draggedBmRef.current = bm.id; (window as any).__dragSrcFolder = bm.folderId }, onDragOver: (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = "move" }, onDrop: (e: React.DragEvent) => { e.stopPropagation(); const srcId = draggedBmRef.current; const srcFolder = (window as any).__dragSrcFolder; if (!srcId || srcId === bm.id || srcFolder !== bm.folderId) return; setBookmarks((prev) => { const fb = prev.filter((x) => x.folderId === bm.folderId); const si = fb.findIndex((x) => x.id === srcId); const di = fb.findIndex((x) => x.id === bm.id); if (si < 0 || di < 0) return prev; const item = prev.find((x) => x.id === srcId)!; fb.splice(si, 1); fb.splice(di, 0, item); handleReorder(bm.folderId, fb.map((x) => x.id)); return prev.map((x) => ({ ...x, order: fb.findIndex((y) => y.id === x.id) })) }); draggedBmRef.current = null; setDragOverFolderId(null) }, onDragEnd: () => { draggedBmRef.current = null; setDragOverFolderId(null) } } : {})} className="flex flex-1 cursor-pointer items-center min-w-0" onClick={() => { if (!selectMode) fetch("/api/bookmarks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: bm.id }) }).catch(()=>{}); window.open(bm.url, "_blank", "noopener,noreferrer") }}>
           <span className="truncate text-sm font-medium">{bm.title || bm.url}</span>
         </div>
         {!selectMode && (<><button onClick={(e) => { e.stopPropagation(); openEditBookmark(bm) }} className="shrink-0 p-1.5 text-muted-foreground/40 bm-actions sm:opacity-0 sm:group-hover:opacity-100 hover:text-foreground"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button>
@@ -373,7 +373,7 @@ function renderTreeSidebar() {
           ) : (<div className="mx-auto max-w-7xl"><div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {display.map((bm) => (
               <div key={bm.id} draggable onDragStart={() => { draggedBmRef.current = bm.id }} onDragEnd={() => { draggedBmRef.current = null; setDragOverFolderId(null) }}
-                onClick={() => { if (!selectMode) window.open(bm.url, "_blank", "noopener,noreferrer") }} className="group relative cursor-pointer bg-card p-4 hover:bg-muted/30 cursor-grab active:cursor-grabbing" style={{ border: "1px solid var(--border)", breakInside: "avoid-column", marginBottom: "1.25rem" }}>
+                onClick={() => { if (!selectMode) fetch("/api/bookmarks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: bm.id }) }).catch(()=>{}); window.open(bm.url, "_blank", "noopener,noreferrer") }} className="group relative cursor-pointer bg-card p-4 hover:bg-muted/30 cursor-grab active:cursor-grabbing" style={{ border: "1px solid var(--border)", breakInside: "avoid-column", marginBottom: "1.25rem" }}>
                 <div className="flex items-start gap-3">
                   {bm.favicon ? <img src={bm.favicon} alt="" className="mt-0.5 h-5 w-5" /> : <Bookmark className="mt-0.5 h-5 w-5 shrink-0 text-primary/60" />}
                   <div className="min-w-0 flex-1"><h3 className="truncate text-sm font-medium">{bm.title || bm.url}</h3><p className="mt-0.5 truncate text-xs text-muted-foreground">{bm.url}</p></div>
@@ -513,12 +513,15 @@ function renderTreeSidebar() {
           <Input id="editUrl" value={bmFormUrl} onChange={(e) => setBmFormUrl(e.target.value)} />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="editTitle">标题</Label>
-          <Input id="editTitle" value={bmFormTitle} onChange={(e) => setBmFormTitle(e.target.value)} />
+          <Label htmlFor="editTitle">标题</Label>          <Input id="editTitle" value={bmFormTitle} onChange={(e) => setBmFormTitle(e.target.value)} />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="editFolderSelect">文件夹</Label>
+          <Select value={bmFormFolderId ?? ""} onValueChange={(v) => setBmFormFolderId(v || null)}><SelectTrigger className="w-full bg-muted/50 text-foreground"><SelectValue placeholder="未分类" /></SelectTrigger><SelectContent><SelectItem value="">未分类</SelectItem>{folders.filter((f) => !f.parentId).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0)).map((f) => (<SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>))}</SelectContent></Select>
         </div>
       </div>
       <DialogFooter>
-        <Button variant="outline" onClick={() => { setShowEditBookmark(false); setEditingBookmark(null); setBmFormUrl(""); setBmFormTitle("") }}>取消</Button>
+        <Button variant="outline" onClick={() => { setShowEditBookmark(false); setEditingBookmark(null); setBmFormUrl(""); setBmFormTitle(""); setBmFormFolderId(null) }}>取消</Button>
         <Button onClick={confirmEditBookmark} disabled={!bmFormUrl.trim()}>保存</Button>
       </DialogFooter>
     </DialogContent>
