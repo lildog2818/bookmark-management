@@ -86,12 +86,10 @@ export async function PATCH(req: Request) {
   if (!session?.user?.id) return NextResponse.json({ error: "未登录" }, { status: 401 })
 
   try {
-    const body = await req.json()
-    const { id, title, url, folderId } = body as Record<string, string | null | undefined>
+    const { id, title, url, folderId } = await req.json()
     if (!id) return NextResponse.json({ error: "缺少书签 ID" }, { status: 400 })
 
-    const sets: string[] = ['"lastUsedAt" = NOW()']
-    const params: (string | null)[] = []
+    const data: Record<string, unknown> = { lastUsedAt: new Date() }
 
     if (folderId !== undefined) {
       if (folderId) {
@@ -100,29 +98,30 @@ export async function PATCH(req: Request) {
         })
         if (!folder) return NextResponse.json({ error: "文件夹不存在" }, { status: 403 })
       }
-      params.push(folderId || null)
-      sets.push('"folderId" = $' + params.length)
+      data.folderId = folderId || null
     }
 
-    if (url !== undefined && url !== null) {
+    if (url !== undefined) {
       if (!validateUrl(url)) return NextResponse.json({ error: "仅支持 http/https 链接" }, { status: 400 })
       if (url.length > 2048) return NextResponse.json({ error: "URL 过长" }, { status: 400 })
-      params.push(url)
-      sets.push('"url" = $' + params.length)
+      data.url = url
     }
 
     if (title !== undefined) {
-      params.push(String(title).slice(0, 500))
-      sets.push('"title" = $' + params.length)
+      data.title = String(title).slice(0, 500)
     }
 
-    params.push(id, session.user.id)
-    const sql = 'UPDATE "Bookmark" SET ' + sets.join(", ") + ' WHERE "id" = $' + (params.length - 1) + ' AND "userId" = $' + params.length
+    const result = await prisma.bookmark.updateMany({
+      where: { id, userId: session.user.id },
+      data,
+    })
 
-    await prisma.$executeRawUnsafe(sql, ...params)
+    if (result.count === 0) {
+      return NextResponse.json({ error: "书签不存在或无权限" }, { status: 404 })
+    }
+
     return NextResponse.json({ success: true })
-  } catch (e) {
-    console.error("PATCH error:", e instanceof Error ? e.message : e)
+  } catch {
     return NextResponse.json({ error: "更新失败" }, { status: 500 })
   }
 }
