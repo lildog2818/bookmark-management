@@ -61,7 +61,7 @@ export async function GET() {
 
   const bookmarks = await prisma.bookmark.findMany({
     where: { userId: session.user.id },
-    orderBy: [{ lastUsedAt: "desc" }, { order: "asc" }],
+    orderBy: [{ lastUsedAt: { sort: "desc", nulls: "last" } }, { order: "asc" }],
   })
   return NextResponse.json(bookmarks)
 }
