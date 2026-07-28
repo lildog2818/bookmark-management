@@ -358,6 +358,70 @@ function renderTreeSidebar() {
     )
   }
 
+
+
+  return (
+    <div className="flex h-screen flex-col overflow-hidden">
+      <header className="flex items-center gap-2 px-4 py-2.5" style={{ borderBottom: "1px solid var(--border)", background: "var(--header-bg)" }}>
+        <h1 className="mr-2 hidden text-sm font-bold tracking-tight sm:block"><span className="text-primary">Bookmark</span></h1>
+        <div className="relative flex-1 max-w-sm"><Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
+          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索书签..." className="w-full bg-muted/50 px-3 py-1.5 pl-9 text-sm outline-none focus:bg-muted transition-colors placeholder:text-muted-foreground/50" /></div>
+        <span className="whitespace-nowrap text-xs text-muted-foreground/60">{filteredBookmarks.length}/{bookmarks.length}</span>
+        <div className="flex items-center gap-1">
+          <button onClick={() => setViewMode(viewMode === "card" ? "tree" : "card")} className="p-1.5 text-muted-foreground/60 hover:text-foreground" title={viewMode === "card" ? "文件夹" : "卡片"}>
+            {viewMode === "card" ? <PanelLeftClose className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}</button>
+          <button onClick={() => { setSelectMode(!selectMode); if (selectMode) setSelectedBmIds(new Set()) }}
+            className={`p-1.5 transition-colors ${selectMode ? "text-primary" : "text-muted-foreground/60 hover:text-foreground"}`} title="多选模式"><CheckSquare className="h-4 w-4" /></button>
+          <div className="mx-1 h-4 w-px bg-border/50" />
+          <button onClick={() => setShowCreateBookmark(true)} className="flex items-center gap-1 bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"><Plus className="h-3.5 w-3.5" /> 书签</button>
+          <button onClick={() => setShowCreateFolder(true)} className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"><FolderPlus className="h-3.5 w-3.5" /> 文件夹</button>
+          <input ref={fileInputRef} type="file" accept=".html,.htm" onChange={handleImport} className="hidden" />
+          <button onClick={() => fileInputRef.current?.click()} disabled={importing} className="px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50"><Upload className="h-3.5 w-3.5" /></button>
+          <div className="relative group"><button className="px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted"><Download className="h-3.5 w-3.5" /></button>
+            <div className="absolute right-0 top-full z-50 mt-1 hidden w-28 bg-card py-1 shadow group-hover:block" style={{ border: "1px solid var(--border)" }}>
+              <a href="/api/bookmarks/export?format=html" className="block px-3 py-1.5 text-xs hover:bg-muted">导出 HTML</a>
+              <a href="/api/bookmarks/export?format=json" className="block px-3 py-1.5 text-xs hover:bg-muted">导出 JSON</a></div></div>
+          <Tooltip><TooltipTrigger onClick={handleDetectDuplicates} disabled={dedupLoading} className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50 transition-colors">{dedupLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Scan className="h-3.5 w-3.5" />}<span className="hidden sm:inline">去重</span></TooltipTrigger><TooltipContent>检测并清理重复书签</TooltipContent></Tooltip>
+          <div className="mx-1 h-4 w-px bg-border/50" />
+          <button onClick={() => alert("test ok")} className="p-1.5 text-xs text-muted-foreground/60 hover:text-foreground" title="Test">T</button><button onClick={toggleTheme} className="p-1.5 text-muted-foreground/60 hover:text-foreground">{theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>
+          <button onClick={() => signOut({ callbackUrl: "/" })} className="p-1.5 text-muted-foreground/60 hover:text-foreground"><LogOut className="h-4 w-4" /></button>
+        </div>
+      </header>
+      {importResult && (<div className="px-6 py-2 text-sm bg-muted/30" style={{ borderBottom: "1px solid var(--border)" }}>{importResult}<button onClick={() => setImportResult(null)} className="ml-2 font-medium text-muted-foreground hover:text-foreground">关闭</button></div>)}
+      <main className="flex-1 overflow-y-auto">{viewMode === "card" ? renderCardView() : renderTreeView()}</main>
+
+            <Dialog open={showDedup} onOpenChange={(o) => { if (!o) setShowDedup(false) }}>
+        <DialogContent className="max-w-2xl sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>去重管理</DialogTitle>
+            <DialogDescription>选择要删除的重复书签</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[55vh] overflow-y-auto">
+            {duplicates.length === 0 ? <p className="py-12 text-center text-sm text-muted-foreground">没有发现重复书签 🎉</p> : (
+              <div className="space-y-3">{duplicates.map((group, gi) => (
+                <div key={gi} className="rounded-lg border p-4">
+                  <p className="mb-2 truncate text-xs font-medium text-muted-foreground" title={group.url}>{group.url}</p>
+                  {group.bookmarks.map((bm: any) => (
+                    <label key={bm.id} className={"flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-muted " + (selectedDedupIds.has(bm.id) ? "bg-destructive/5 line-through opacity-60" : "")}>
+                      <input type="checkbox" checked={selectedDedupIds.has(bm.id)} onChange={(e) => { setSelectedDedupIds((prev) => { const n = new Set(prev); e.target.checked ? n.add(bm.id) : n.delete(bm.id); return n }) }} className="shrink-0 accent-primary" />
+                      <span className="flex-1 truncate">{bm.title || bm.url}</span>
+                    </label>
+                  ))}
+                </div>
+              ))}</div>
+            )}
+          </div>
+          {duplicates.length > 0 && (
+            <div className="flex items-center justify-between border-t pt-4">
+              <Button variant="ghost" size="sm" onClick={() => { setSelectedDedupIds((prev) => { const n = new Set(prev); duplicates.forEach((g: any) => { g.bookmarks.slice(1).forEach((bm: any) => n.add(bm.id)) }); return n }) }}>保留每组第一个</Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setSelectedDedupIds(new Set())}>取消选择</Button>
+                <Button size="sm" className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={handleDeleteDedup} disabled={selectedDedupIds.size === 0}>删除选中 ({selectedDedupIds.size})</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
   {/* Create Bookmark Dialog */}
   <Dialog open={showCreateBookmark} onOpenChange={(o) => { if (!o) { setShowCreateBookmark(false); setBmFormUrl(""); setBmFormTitle("") } }}>
     <DialogContent>
@@ -469,69 +533,6 @@ function renderTreeSidebar() {
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>
-
-  return (
-    <div className="flex h-screen flex-col overflow-hidden">
-      <header className="flex items-center gap-2 px-4 py-2.5" style={{ borderBottom: "1px solid var(--border)", background: "var(--header-bg)" }}>
-        <h1 className="mr-2 hidden text-sm font-bold tracking-tight sm:block"><span className="text-primary">Bookmark</span></h1>
-        <div className="relative flex-1 max-w-sm"><Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
-          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索书签..." className="w-full bg-muted/50 px-3 py-1.5 pl-9 text-sm outline-none focus:bg-muted transition-colors placeholder:text-muted-foreground/50" /></div>
-        <span className="whitespace-nowrap text-xs text-muted-foreground/60">{filteredBookmarks.length}/{bookmarks.length}</span>
-        <div className="flex items-center gap-1">
-          <button onClick={() => setViewMode(viewMode === "card" ? "tree" : "card")} className="p-1.5 text-muted-foreground/60 hover:text-foreground" title={viewMode === "card" ? "文件夹" : "卡片"}>
-            {viewMode === "card" ? <PanelLeftClose className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}</button>
-          <button onClick={() => { setSelectMode(!selectMode); if (selectMode) setSelectedBmIds(new Set()) }}
-            className={`p-1.5 transition-colors ${selectMode ? "text-primary" : "text-muted-foreground/60 hover:text-foreground"}`} title="多选模式"><CheckSquare className="h-4 w-4" /></button>
-          <div className="mx-1 h-4 w-px bg-border/50" />
-          <button onClick={() => setShowCreateBookmark(true)} className="flex items-center gap-1 bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"><Plus className="h-3.5 w-3.5" /> 书签</button>
-          <button onClick={() => setShowCreateFolder(true)} className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"><FolderPlus className="h-3.5 w-3.5" /> 文件夹</button>
-          <input ref={fileInputRef} type="file" accept=".html,.htm" onChange={handleImport} className="hidden" />
-          <button onClick={() => fileInputRef.current?.click()} disabled={importing} className="px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50"><Upload className="h-3.5 w-3.5" /></button>
-          <div className="relative group"><button className="px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted"><Download className="h-3.5 w-3.5" /></button>
-            <div className="absolute right-0 top-full z-50 mt-1 hidden w-28 bg-card py-1 shadow group-hover:block" style={{ border: "1px solid var(--border)" }}>
-              <a href="/api/bookmarks/export?format=html" className="block px-3 py-1.5 text-xs hover:bg-muted">导出 HTML</a>
-              <a href="/api/bookmarks/export?format=json" className="block px-3 py-1.5 text-xs hover:bg-muted">导出 JSON</a></div></div>
-          <Tooltip><TooltipTrigger onClick={handleDetectDuplicates} disabled={dedupLoading} className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50 transition-colors">{dedupLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Scan className="h-3.5 w-3.5" />}<span className="hidden sm:inline">去重</span></TooltipTrigger><TooltipContent>检测并清理重复书签</TooltipContent></Tooltip>
-          <div className="mx-1 h-4 w-px bg-border/50" />
-          <button onClick={() => alert("test ok")} className="p-1.5 text-xs text-muted-foreground/60 hover:text-foreground" title="Test">T</button><button onClick={toggleTheme} className="p-1.5 text-muted-foreground/60 hover:text-foreground">{theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>
-          <button onClick={() => signOut({ callbackUrl: "/" })} className="p-1.5 text-muted-foreground/60 hover:text-foreground"><LogOut className="h-4 w-4" /></button>
-        </div>
-      </header>
-      {importResult && (<div className="px-6 py-2 text-sm bg-muted/30" style={{ borderBottom: "1px solid var(--border)" }}>{importResult}<button onClick={() => setImportResult(null)} className="ml-2 font-medium text-muted-foreground hover:text-foreground">关闭</button></div>)}
-      <main className="flex-1 overflow-y-auto">{viewMode === "card" ? renderCardView() : renderTreeView()}</main>
-
-            <Dialog open={showDedup} onOpenChange={(o) => { if (!o) setShowDedup(false) }}>
-        <DialogContent className="max-w-2xl sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>去重管理</DialogTitle>
-            <DialogDescription>选择要删除的重复书签</DialogDescription>
-          </DialogHeader>
-          <div className="max-h-[55vh] overflow-y-auto">
-            {duplicates.length === 0 ? <p className="py-12 text-center text-sm text-muted-foreground">没有发现重复书签 🎉</p> : (
-              <div className="space-y-3">{duplicates.map((group, gi) => (
-                <div key={gi} className="rounded-lg border p-4">
-                  <p className="mb-2 truncate text-xs font-medium text-muted-foreground" title={group.url}>{group.url}</p>
-                  {group.bookmarks.map((bm: any) => (
-                    <label key={bm.id} className={"flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-muted " + (selectedDedupIds.has(bm.id) ? "bg-destructive/5 line-through opacity-60" : "")}>
-                      <input type="checkbox" checked={selectedDedupIds.has(bm.id)} onChange={(e) => { setSelectedDedupIds((prev) => { const n = new Set(prev); e.target.checked ? n.add(bm.id) : n.delete(bm.id); return n }) }} className="shrink-0 accent-primary" />
-                      <span className="flex-1 truncate">{bm.title || bm.url}</span>
-                    </label>
-                  ))}
-                </div>
-              ))}</div>
-            )}
-          </div>
-          {duplicates.length > 0 && (
-            <div className="flex items-center justify-between border-t pt-4">
-              <Button variant="ghost" size="sm" onClick={() => { setSelectedDedupIds((prev) => { const n = new Set(prev); duplicates.forEach((g: any) => { g.bookmarks.slice(1).forEach((bm: any) => n.add(bm.id)) }); return n }) }}>保留每组第一个</Button>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setSelectedDedupIds(new Set())}>取消选择</Button>
-                <Button size="sm" className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={handleDeleteDedup} disabled={selectedDedupIds.size === 0}>删除选中 ({selectedDedupIds.size})</Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
