@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth"
+﻿import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 
@@ -67,6 +67,11 @@ export async function POST(req: Request) {
   }
 
   try {
+    // 读取 body 大小限制（5MB）
+    const contentLength = req.headers.get("content-length")
+    if (contentLength && parseInt(contentLength) > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: "文件不能超过 5MB" }, { status: 400 })
+    }
     const formData = await req.formData()
     const file = formData.get("file") as File | null
 
@@ -74,6 +79,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "请上传书签文件" }, { status: 400 })
     }
 
+    // 文件大小校验
+    if (file.size > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: "文件不能超过 5MB" }, { status: 400 })
+    }
     const html = await file.text()
     const { folders: parsedFolders, bookmarks: parsedBookmarks } = parseBookmarkHTML(html)
 

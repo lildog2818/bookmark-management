@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth"
+﻿import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 
@@ -8,9 +8,25 @@ export async function POST(req: Request) {
 
   try {
     const { name, parentId, color } = await req.json()
+
+    // 长度限制
+    if (!name || name.length > 200) {
+      return NextResponse.json({ error: "文件夹名称无效" }, { status: 400 })
+    }
+
+    // 验证 parentId 归属（防止跨用户引用）
+    if (parentId) {
+      const parentFolder = await prisma.folder.findFirst({
+        where: { id: parentId, userId: session.user.id },
+      })
+      if (!parentFolder) {
+        return NextResponse.json({ error: "父文件夹不存在" }, { status: 403 })
+      }
+    }
+
     const folder = await prisma.folder.create({
       data: {
-        name,
+        name: name.slice(0, 200),
         color: color || null,
         parentId: parentId || null,
         userId: session.user.id,
@@ -57,8 +73,8 @@ export async function PATCH(req: Request) {
     if (!id) return NextResponse.json({ error: "缺少文件夹 ID" }, { status: 400 })
 
     const data: any = {}
-    if (name !== undefined) data.name = name
-    if (priority !== undefined) data.priority = priority
+    if (name !== undefined) data.name = String(name).slice(0, 200)
+    if (priority !== undefined) data.priority = Number(priority) || 0
 
     await prisma.folder.updateMany({
       where: { id, userId: session.user.id },

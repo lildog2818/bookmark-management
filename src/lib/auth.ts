@@ -1,4 +1,4 @@
-import NextAuth from "next-auth"
+﻿import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { compare } from "bcryptjs"
 import prisma from "@/lib/prisma"
@@ -46,5 +46,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   session: {
     strategy: "jwt",
+    maxAge: 7 * 24 * 60 * 60, // 7 天
   },
 })

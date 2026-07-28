@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth"
+﻿import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 
@@ -9,6 +9,16 @@ export async function POST(req: Request) {
   try {
     const { folderId, bookmarkIds } = await req.json()
     if (!Array.isArray(bookmarkIds)) return NextResponse.json({ error: "参数错误" }, { status: 400 })
+
+    // 验证目标 folderId 归属
+    if (folderId) {
+      const folder = await prisma.folder.findFirst({
+        where: { id: folderId, userId: session.user.id },
+      })
+      if (!folder) {
+        return NextResponse.json({ error: "文件夹不存在" }, { status: 403 })
+      }
+    }
 
     // Update order for each bookmark based on its position in the array
     await Promise.all(
@@ -22,7 +32,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("排序失败:", error)
+    console.error("排序失败:", error instanceof Error ? error.message : error)
     return NextResponse.json({ error: "排序失败" }, { status: 500 })
   }
 }
