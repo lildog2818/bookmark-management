@@ -28,7 +28,7 @@ export default function Home() {
 
       <main className="flex flex-1 flex-col">
         {/* Hero 区域 */}
-        <section className="relative flex min-h-[80vh] flex-col items-center justify-center overflow-hidden px-6 pt-16">
+        <section className="relative flex min-h-[60vh] sm:min-h-[80vh] flex-col items-center justify-center overflow-hidden px-6 pt-16">
           {/* 背景装饰 */}
           <div className="pointer-events-none absolute inset-0 -z-10">
             <div className="absolute left-1/2 top-1/3 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl" />
@@ -37,14 +37,14 @@ export default function Home() {
           </div>
 
           <div className="animate-slide-up max-w-3xl text-center">
-            <h2 className="bg-gradient-to-r from-primary via-blue-500 to-purple-600 bg-clip-text text-5xl font-extrabold tracking-tight text-transparent sm:text-6xl">
+            <h2 className="bg-gradient-to-r from-primary via-blue-500 to-purple-600 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-5xl">
               优雅地管理您的书签
             </h2>
-            <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
+            <p className="mt-4 sm:mt-6 text-base sm:text-lg leading-relaxed text-muted-foreground">
               导入浏览器书签、分类整理、快速搜索，随时随地访问您的收藏。
               支持 Chrome / Firefox / Edge 书签导入。
             </p>
-            <div className="mt-8 flex items-center justify-center gap-4">
+            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
               <Link
                 href="/register"
                 className="rounded-lg bg-primary px-8 py-3 text-base font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90 hover:shadow-xl hover:-translate-y-0.5"
@@ -62,8 +62,8 @@ export default function Home() {
         </section>
 
         {/* 特性区域 */}
-        <section className="mx-auto max-w-5xl px-6 pb-24">
-          <div className="grid gap-6 sm:grid-cols-3">
+        <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-16 sm:pb-24">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
             {[
               {
                 icon: "📂",

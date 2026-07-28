@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
@@ -152,6 +152,31 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--muted-foreground); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--foreground); }
+
+/* === 响应式卡片瀑布流列数 === */
+.masonry-cards {
+  column-count: 1;
+  column-gap: 1rem;
+}
+@media (min-width: 640px) {
+  .masonry-cards {
+    column-count: 2;
+    column-gap: 1.25rem;
+  }
+}
+@media (min-width: 1024px) {
+  .masonry-cards {
+    column-count: 3;
+    column-gap: 1.25rem;
+  }
+}
+
+/* === 移动端触屏：始终显示操作按钮 === */
+@media (pointer: coarse) {
+  .bm-actions {
+    opacity: 1 !important;
+  }
+}
 
 @layer base {
   * {
