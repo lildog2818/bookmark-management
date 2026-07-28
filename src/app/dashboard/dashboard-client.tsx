@@ -193,8 +193,8 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
       return (<div className="flex h-full items-center justify-center"><div className="text-center"><Bookmark className="mx-auto h-12 w-12 text-muted-foreground/30" /><p className="mt-4 text-sm text-muted-foreground">{searchQuery ? "没有找到匹配的书签" : "还没有书签"}</p></div></div>)
     }
     const allCards: ({ type: "root"; data: Bookmark[] } | { type: "folder"; data: Folder })[] = [
-      ...(rootBookmarks.length > 0 ? [{ type: "root" as const, data: rootBookmarks }] : []),
       ...rootFolders.map((f) => ({ type: "folder" as const, data: f })),
+      ...(rootBookmarks.length > 0 ? [{ type: "root" as const, data: rootBookmarks }] : []),
     ]
     return (
       <div className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
@@ -208,17 +208,40 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             </div>
           </div>
         )}
-        <div className="flex flex-wrap gap-5" style={{ alignItems: "flex-start" }}>
+        <div className="px-4 py-6 lg:px-8" style={{ columnCount: 3, columnGap: "1.25rem" }}>
           {allCards.map((card, ci) => {
             const isFolder = card.type === "folder"
             const cardId = isFolder ? card.data.id : "__root__"
             const isCollapsed = collapsedCards.has(cardId)
             return (
               <div key={isFolder ? card.data.id : "root"}
-                {...(isFolder ? { draggable: !selectMode, onDragStart: (e: React.DragEvent) => { dragCardRef.current = card.data.id; (window as any).__dragCardIdx = ci; e.dataTransfer.effectAllowed = "move" }, onDragOver: (e: React.DragEvent) => { if (dragCardRef.current && dragCardRef.current !== card.data.id) { e.preventDefault(); e.dataTransfer.dropEffect = "move" } }, onDragEnd: () => { dragCardRef.current = null }, onDrop: (e: React.DragEvent) => { e.preventDefault(); const srcId = dragCardRef.current; const srcIdx = (window as any).__dragCardIdx; if (!srcId || srcId === card.data.id || srcIdx === undefined) return; const allF = rootFolders; const si = allF.findIndex((x) => x.id === srcId); const di = allF.findIndex((x) => x.id === card.data.id); if (si < 0 || di < 0) return; const arr = [...allF]; const [moved] = arr.splice(si, 1); arr.splice(di, 0, moved); setFolders((prev) => { const others = prev.filter((x) => x.parentId); return [...arr, ...others] }); handleFolderReorder(arr.map((x) => x.id)); dragCardRef.current = null } } : {})}
-                {...dragProps(cardId)}
+            {...(isFolder ? { draggable: !selectMode } : {})}
+            {...(isFolder ? {
+              onDragOver: (e: React.DragEvent) => {
+                if (draggedBmRef.current) { e.preventDefault(); setDragOverFolderId(cardId) }
+                else if (dragCardRef.current) { if (dragCardRef.current !== card.data.id) { e.preventDefault() } }
+              },
+              onDragLeave: () => { if (draggedBmRef.current) setDragOverFolderId(null) },
+              onDragStart: (e: React.DragEvent) => { dragCardRef.current = card.data.id; e.dataTransfer.effectAllowed = "move" },
+              onDragEnd: () => { dragCardRef.current = null; draggedBmRef.current = null; setDragOverFolderId(null) },
+              onDrop: (e: React.DragEvent) => {
+                e.preventDefault(); const bmId = draggedBmRef.current; const cId = dragCardRef.current
+                if (bmId) {
+                  const tf = cardId === "__root__" ? null : cardId
+                  if (selectMode) { if (selectedBmIds.has(bmId)) { moveMultipleBookmarks(Array.from(selectedBmIds), tf) } }
+                  else { moveBookmark(bmId, tf) }
+                  draggedBmRef.current = null; setDragOverFolderId(null); return
+                }
+                if (cId) { if (cId !== card.data.id) {
+                  const af = rootFolders; const si = af.findIndex((x) => x.id === cId); const di = af.findIndex((x) => x.id === card.data.id)
+                  if (si >= 0) { if (di >= 0) { const ar = [...af]; const [m] = ar.splice(si, 1); ar.splice(di, 0, m); setFolders((prev) => { const o = prev.filter((x) => x.parentId); return [...ar, ...o] }); handleFolderReorder(ar.map((x) => x.id)) } }
+                  dragCardRef.current = null
+                } }
+              }
+            } : {})}
+            {...dragProps(cardId)}
                 className={`bg-card transition-shadow ${isOver(cardId) ? "ring-2 ring-primary" : ""} ${isFolder ? "cursor-grab active:cursor-grabbing" : ""}`}
-                style={{ border: "1px solid var(--border)", width: "calc((100% - 2 * 1.25rem) / 3)", minWidth: "280px", flex: "1 1 280px" }}>
+                style={{ border: "1px solid var(--border)", breakInside: "avoid-column", marginBottom: "1.25rem" }}>
                 {card.type === "root" ? (
                   <><div className="flex items-center gap-2 px-4 pt-3 pb-2" style={{ borderBottom: isCollapsed ? "none" : "1px solid var(--border)" }}>
                     <Bookmark className="h-4 w-4 text-muted-foreground/50" /><span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">未分类</span><span className="ml-auto text-xs text-muted-foreground/40">{card.data.length}</span>
