@@ -182,11 +182,20 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
       )
     })
   }
+    const handleFolderReorder = useCallback(async (fIds: string[]) => {
+    try { await fetch("/api/folders/reorder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderIds: fIds }) }) } catch {}
+  }, [])
+
+  const dragCardRef = useRef<string | null>(null)
+
   function renderCardView() {
     if (filteredBookmarks.length === 0) {
       return (<div className="flex h-full items-center justify-center"><div className="text-center"><Bookmark className="mx-auto h-12 w-12 text-muted-foreground/30" /><p className="mt-4 text-sm text-muted-foreground">{searchQuery ? "没有找到匹配的书签" : "还没有书签"}</p></div></div>)
     }
-    const allCards = [...(rootBookmarks.length > 0 ? [{ type: "root" as const, data: rootBookmarks }] : []), ...rootFolders.map((f) => ({ type: "folder" as const, data: f }))]
+    const allCards: ({ type: "root"; data: Bookmark[] } | { type: "folder"; data: Folder })[] = [
+      ...(rootBookmarks.length > 0 ? [{ type: "root" as const, data: rootBookmarks }] : []),
+      ...rootFolders.map((f) => ({ type: "folder" as const, data: f })),
+    ]
     return (
       <div className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
         {selectMode && (
@@ -199,35 +208,42 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             </div>
           </div>
         )}
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 auto-rows-min">
-          {allCards.map((card, ci) => (
-            <div key={ci} {...(card.type === "folder" ? dragProps(card.data.id) : dragProps("__root__"))}
-              className={`bg-card transition-shadow ${isOver(card.type === "folder" ? card.data.id : "__root__") ? "ring-2 ring-primary" : ""}`}
-              style={{ border: "1px solid var(--border)", height: "fit-content" }}>
-              {card.type === "root" ? (
-                <><div className="flex items-center gap-2 px-4 pt-3 pb-2" style={{ borderBottom: "1px solid var(--border)" }}>
-                  <Bookmark className="h-4 w-4 text-muted-foreground/50" /><span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">未分类</span><span className="ml-auto text-xs text-muted-foreground/40">{card.data.length}</span>
-                </div>{!collapsedCards.has("__root__") && <div className="pb-1">{card.data.map(renderBookmarkRow)}</div>}</>
-              ) : (
-                <><div className="group flex items-center gap-2 px-4 pt-3 pb-2 cursor-pointer hover:bg-muted/20" onClick={() => setCollapsedCards((prev) => { const n = new Set(prev); n.has(card.data.id) ? n.delete(card.data.id) : n.add(card.data.id); return n })}
-                  style={{ borderBottom: collapsedCards.has(card.data.id) ? "none" : "1px solid var(--border)" }}>
-                  <button onClick={(e) => { e.stopPropagation(); setCollapsedCards((prev) => { const n = new Set(prev); n.has(card.data.id) ? n.delete(card.data.id) : n.add(card.data.id); return n }) }} className="p-0.5 text-muted-foreground/50 hover:text-foreground">
-                    {collapsedCards.has(card.data.id) ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  </button>
-                  <FolderIcon className="h-4 w-4 shrink-0" style={{ color: card.data.color || undefined }} />
-                  <span className="text-sm font-semibold">{card.data.name}</span>
-                  {(filteredBookmarksByFolder.get(card.data.id)?.length || 0) > 0 && <span className="text-xs text-muted-foreground/40">{filteredBookmarksByFolder.get(card.data.id)?.length}</span>}
-                  <button onClick={(e) => deleteFolder(card.data.id, e)} className="ml-auto p-1 text-muted-foreground/30 opacity-0 hover:text-destructive group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>
-                </div>
-                {!collapsedCards.has(card.data.id) && (<div className="pb-1">{(() => { const bms = filteredBookmarksByFolder.get(card.data.id) || []; const subs = childFoldersMap.get(card.data.id) || []; const hasSub = subs.some((sf) => { const sfb = filteredBookmarksByFolder.get(sf.id) || []; return sfb.length > 0 || (childFoldersMap.get(sf.id) || []).length > 0 }); if (bms.length === 0 && !hasSub) return <p className="px-4 py-6 text-xs text-muted-foreground/40">空文件夹</p>; return <>{bms.map(renderBookmarkRow)}{renderSubFoldersInCard(card.data.id)}</> })()}</div>)}
-                </>)}
-            </div>
-          ))}
+        <div className="flex flex-wrap gap-5" style={{ alignItems: "flex-start" }}>
+          {allCards.map((card, ci) => {
+            const isFolder = card.type === "folder"
+            const cardId = isFolder ? card.data.id : "__root__"
+            const isCollapsed = collapsedCards.has(cardId)
+            return (
+              <div key={isFolder ? card.data.id : "root"}
+                {...(isFolder ? { draggable: !selectMode, onDragStart: (e: React.DragEvent) => { dragCardRef.current = card.data.id; (window as any).__dragCardIdx = ci; e.dataTransfer.effectAllowed = "move" }, onDragOver: (e: React.DragEvent) => { if (dragCardRef.current && dragCardRef.current !== card.data.id) { e.preventDefault(); e.dataTransfer.dropEffect = "move" } }, onDragEnd: () => { dragCardRef.current = null }, onDrop: (e: React.DragEvent) => { e.preventDefault(); const srcId = dragCardRef.current; const srcIdx = (window as any).__dragCardIdx; if (!srcId || srcId === card.data.id || srcIdx === undefined) return; const allF = rootFolders; const si = allF.findIndex((x) => x.id === srcId); const di = allF.findIndex((x) => x.id === card.data.id); if (si < 0 || di < 0) return; const arr = [...allF]; const [moved] = arr.splice(si, 1); arr.splice(di, 0, moved); setFolders((prev) => { const others = prev.filter((x) => x.parentId); return [...arr, ...others] }); handleFolderReorder(arr.map((x) => x.id)); dragCardRef.current = null } } : {})}
+                {...dragProps(cardId)}
+                className={`bg-card transition-shadow ${isOver(cardId) ? "ring-2 ring-primary" : ""} ${isFolder ? "cursor-grab active:cursor-grabbing" : ""}`}
+                style={{ border: "1px solid var(--border)", width: "calc((100% - 2 * 1.25rem) / 3)", minWidth: "280px", flex: "1 1 280px" }}>
+                {card.type === "root" ? (
+                  <><div className="flex items-center gap-2 px-4 pt-3 pb-2" style={{ borderBottom: isCollapsed ? "none" : "1px solid var(--border)" }}>
+                    <Bookmark className="h-4 w-4 text-muted-foreground/50" /><span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">未分类</span><span className="ml-auto text-xs text-muted-foreground/40">{card.data.length}</span>
+                  </div>{!isCollapsed && <div className="pb-1">{card.data.map(renderBookmarkRow)}</div>}</>
+                ) : (
+                  <><div className="group flex items-center gap-2 px-4 pt-3 pb-2 cursor-pointer hover:bg-muted/20" onClick={() => setCollapsedCards((prev) => { const n = new Set(prev); n.has(card.data.id) ? n.delete(card.data.id) : n.add(card.data.id); return n })}
+                    style={{ borderBottom: isCollapsed ? "none" : "1px solid var(--border)" }}>
+                    <button onClick={(e) => { e.stopPropagation(); setCollapsedCards((prev) => { const n = new Set(prev); n.has(card.data.id) ? n.delete(card.data.id) : n.add(card.data.id); return n }) }} className="p-0.5 text-muted-foreground/50 hover:text-foreground">
+                      {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </button>
+                    <FolderIcon className="h-4 w-4 shrink-0" style={{ color: card.data.color || undefined }} />
+                    <span className="text-sm font-semibold">{card.data.name}</span>
+                    {(filteredBookmarksByFolder.get(card.data.id)?.length || 0) > 0 && <span className="text-xs text-muted-foreground/40">{filteredBookmarksByFolder.get(card.data.id)?.length}</span>}
+                    <button onClick={(e) => deleteFolder(card.data.id, e)} className="ml-auto p-1 text-muted-foreground/30 opacity-0 hover:text-destructive group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>
+                  </div>
+                  {!isCollapsed && (<div className="pb-1">{(() => { const bms = filteredBookmarksByFolder.get(card.data.id) || []; const subs = childFoldersMap.get(card.data.id) || []; const hasSub = subs.some((sf) => { const sfb = filteredBookmarksByFolder.get(sf.id) || []; return sfb.length > 0 || (childFoldersMap.get(sf.id) || []).length > 0 }); if (bms.length === 0 && !hasSub) return <p className="px-4 py-6 text-xs text-muted-foreground/40">空文件夹</p>; return <>{bms.map(renderBookmarkRow)}{renderSubFoldersInCard(card.data.id)}</> })()}</div>)}
+                  </>)}
+              </div>
+            )
+          })}
         </div>
       </div>
     )
   }
-  function renderTreeSidebar() {
+function renderTreeSidebar() {
     const renderTree = (list: Folder[], depth = 0) => list.map((f) => {
       const children = childFoldersMap.get(f.id) || []; const isExpanded = expandedFolders.has(f.id); const isSelected = selectedFolderId === f.id
       return (<div key={f.id}><div {...dragProps(f.id)} className={`group flex items-center ${isOver(f.id) ? "bg-primary/10" : ""}`}>
