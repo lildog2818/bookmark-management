@@ -86,51 +86,43 @@ export async function PATCH(req: Request) {
   if (!session?.user?.id) return NextResponse.json({ error: "未登录" }, { status: 401 })
 
   try {
-    const { id, title, url, folderId } = await req.json()
+    const body = await req.json()
+    const { id, title, url, folderId } = body as Record<string, string | null | undefined>
     if (!id) return NextResponse.json({ error: "缺少书签 ID" }, { status: 400 })
 
-    // 构建更新数据
-    const data: Record<string, unknown> = {}
+    const sets: string[] = ['"lastUsedAt" = NOW()']
+    const params: (string | null)[] = []
 
     if (folderId !== undefined) {
-      // 验证目标 folderId 归属
       if (folderId) {
         const folder = await prisma.folder.findFirst({
           where: { id: folderId, userId: session.user.id },
         })
-        if (!folder) {
-          return NextResponse.json({ error: "文件夹不存在" }, { status: 403 })
-        }
+        if (!folder) return NextResponse.json({ error: "文件夹不存在" }, { status: 403 })
       }
-      data.folderId = folderId || null
+      params.push(folderId || null)
+      sets.push('"folderId" = $' + params.length)
     }
 
-    if (url !== undefined) {
-      if (!validateUrl(url)) {
-        return NextResponse.json({ error: "仅支持 http/https 链接" }, { status: 400 })
-      }
-      if (url.length > 2048) {
-        return NextResponse.json({ error: "URL 过长" }, { status: 400 })
-      }
-      data.url = url
+    if (url !== undefined && url !== null) {
+      if (!validateUrl(url)) return NextResponse.json({ error: "仅支持 http/https 链接" }, { status: 400 })
+      if (url.length > 2048) return NextResponse.json({ error: "URL 过长" }, { status: 400 })
+      params.push(url)
+      sets.push('"url" = $' + params.length)
     }
 
     if (title !== undefined) {
-      data.title = String(title).slice(0, 500)
+      params.push(String(title).slice(0, 500))
+      sets.push('"title" = $' + params.length)
     }
 
-    data.lastUsedAt = new Date()
-    const result = await prisma.bookmark.updateMany({
-      where: { id, userId: session.user.id },
-      data,
-    })
+    params.push(id, session.user.id)
+    const sql = 'UPDATE "Bookmark" SET ' + sets.join(", ") + ' WHERE "id" = $' + (params.length - 1) + ' AND "userId" = $' + params.length
 
-    if (result.count === 0) {
-      return NextResponse.json({ error: "书签不存在或无权限" }, { status: 404 })
-    }
-
+    await prisma.$executeRawUnsafe(sql, ...params)
     return NextResponse.json({ success: true })
-  } catch {
+  } catch (e) {
+    console.error("PATCH error:", e instanceof Error ? e.message : e)
     return NextResponse.json({ error: "更新失败" }, { status: 500 })
   }
 }
