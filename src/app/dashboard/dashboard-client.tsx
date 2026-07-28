@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef, useEffect } from "react"
+import { useState, useCallback, useRef } from "react"
 import { signOut } from "next-auth/react"
 import { useTheme } from "@/lib/theme"
 import {
@@ -9,6 +9,27 @@ import {
   Upload, Download, Trash2, X, Sun, Moon,
   FolderPlus, ExternalLink, LayoutGrid, PanelLeftClose, CheckSquare,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog"
 
 interface Folder { id: string; name: string; color: string | null; icon: string | null; parentId: string | null; priority: number }
 interface Bookmark { id: string; title: string; url: string; description: string | null; favicon: string | null; order: number; folderId: string | null }
@@ -38,6 +59,18 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const [selectMode, setSelectMode] = useState(false)
   const [selectedBmIds, setSelectedBmIds] = useState<Set<string>>(new Set())
 
+  // Dialog states
+  const [showCreateBookmark, setShowCreateBookmark] = useState(false)
+  const [showCreateFolder, setShowCreateFolder] = useState(false)
+  const [editingBookmark, setEditingBookmark] = useState<Bookmark | null>(null)
+  const [editingFolder, setEditingFolder] = useState<Folder | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: "bookmark" | "folder" | "selected"; id?: string } | null>(null)
+
+  // Form states
+  const [bmFormUrl, setBmFormUrl] = useState("")
+  const [bmFormTitle, setBmFormTitle] = useState("")
+  const [folderFormName, setFolderFormName] = useState("")
+
   const rootFolders = folders.filter((f) => !f.parentId).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))
   const childFoldersMap = new Map<string, Folder[]>()
   for (const f of folders) { const pid = f.parentId || "__root__"; if (!childFoldersMap.has(pid)) childFoldersMap.set(pid, []); childFoldersMap.get(pid)!.push(f) }
@@ -64,32 +97,38 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     setSelectedBmIds(new Set()); setSelectMode(false)
   }, [])
 
-  const editBookmark = useCallback(async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    const bm = bookmarks.find((b) => b.id === id)
-    if (!bm) return
-    const title = prompt("修改书签名称：", bm.title)
-    if (title === null) return
-    const url = prompt("修改书签 URL：", bm.url)
-    if (url === null) return
-    try {
-      const res = await fetch("/api/bookmarks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, title: title.trim(), url: url.trim() }) })
-      if (res.ok) setBookmarks((prev) => prev.map((b) => b.id === id ? { ...b, title: title.trim(), url: url.trim() } : b))
-    } catch {}
-  }, [bookmarks])
-
-  const deleteBookmark = useCallback(async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation(); if (!confirm("确认删除这个书签？")) return
-    try { await fetch("/api/bookmarks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); setBookmarks((prev) => prev.filter((b) => b.id !== id)) } catch {}
+  const openEditBookmark = useCallback((bm: Bookmark) => {
+    setBmFormUrl(bm.url); setBmFormTitle(bm.title || ""); setEditingBookmark(bm)
   }, [])
 
-  const deleteSelectedBookmarks = useCallback(async () => {
-    if (selectedBmIds.size === 0) return
-    if (!confirm(`确认删除选中的 ${selectedBmIds.size} 个书签？`)) return
+  const confirmEditBookmark = useCallback(async () => {
+    if (!editingBookmark) return
+    const id = editingBookmark.id
+    try {
+      const res = await fetch("/api/bookmarks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, title: bmFormTitle.trim(), url: bmFormUrl.trim() }) })
+      if (res.ok) setBookmarks((prev) => prev.map((b) => b.id === id ? { ...b, title: bmFormTitle.trim(), url: bmFormUrl.trim() } : b))
+    } catch {}
+    setEditingBookmark(null); setBmFormUrl(""); setBmFormTitle("")
+  }, [editingBookmark, bmFormUrl, bmFormTitle])
+
+  const handleDeleteBookmark = useCallback(async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); setDeleteConfirm({ type: "bookmark", id })
+  }, [])
+
+  const confirmDeleteBookmark = useCallback(async () => {
+    if (!deleteConfirm || deleteConfirm.type !== "bookmark" || !deleteConfirm.id) return
+    const id = deleteConfirm.id
+    try { await fetch("/api/bookmarks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); setBookmarks((prev) => prev.filter((b) => b.id !== id)) } catch {}
+    setDeleteConfirm(null)
+  }, [deleteConfirm])
+
+  const confirmDeleteSelected = useCallback(async () => {
+    if (!deleteConfirm || deleteConfirm.type !== "selected") return
     try { await Promise.all(Array.from(selectedBmIds).map((id) => fetch("/api/bookmarks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }))) } catch {}
     setBookmarks((prev) => prev.filter((b) => !selectedBmIds.has(b.id)))
     setSelectedBmIds(new Set()); setSelectMode(false)
-  }, [selectedBmIds])
+    setDeleteConfirm(null)
+  }, [selectedBmIds, deleteConfirm])
 
   const getDescendantIds = (parentId: string): string[] => {
     const ids: string[] = []; const children = childFoldersMap.get(parentId) || []
@@ -97,43 +136,48 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     return ids
   }
 
-  const editFolder = useCallback(async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    const f = folders.find((x) => x.id === id)
-    if (!f) return
-    const input = prompt("Edit folder (name | priority):", f.name + " | " + (f.priority != null ? f.priority : 0))
-    if (input === null) return
-    const parts = input.split("|").map((s) => s.trim())
-    const name = parts[0] || f.name
-    const priority = parts[1] !== undefined ? parseInt(parts[1], 10) : (f.priority != null ? f.priority : 0)
-    if (parts[1] !== undefined && isNaN(priority)) return
+  const openEditFolder = useCallback((f: Folder) => {
+    setFolderFormName(f.name); setEditingFolder(f)
+  }, [])
+
+  const confirmEditFolder = useCallback(async () => {
+    if (!editingFolder) return
+    const id = editingFolder.id
     try {
-      await fetch("/api/folders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name, priority }) })
-      setFolders((prev) => prev.map((x) => x.id === id ? { ...x, name, priority } : x))
+      await fetch("/api/folders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name: folderFormName.trim(), priority: editingFolder.priority }) })
+      setFolders((prev) => prev.map((x) => x.id === id ? { ...x, name: folderFormName.trim() } : x))
     } catch {}
-  }, [folders])
-  const deleteFolder = useCallback(async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation(); if (!confirm("确认删除这个文件夹及其所有书签？")) return
+    setEditingFolder(null); setFolderFormName("")
+  }, [editingFolder, folderFormName])
+  const handleDeleteFolder = useCallback(async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); setDeleteConfirm({ type: "folder", id })
+  }, [])
+
+  const confirmDeleteFolder = useCallback(async () => {
+    if (!deleteConfirm || deleteConfirm.type !== "folder" || !deleteConfirm.id) return
+    const id = deleteConfirm.id
     try {
       const allIds = [id, ...getDescendantIds(id)]
       await Promise.all(allIds.map((fid) => fetch("/api/folders", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: fid }) })))
       const fRes = await fetch("/api/folders"); if (fRes.ok) setFolders(await fRes.json())
       const bRes = await fetch("/api/bookmarks"); if (bRes.ok) setBookmarks(await bRes.json())
     } catch {}
-  }, [getDescendantIds])
+    setDeleteConfirm(null)
+  }, [deleteConfirm, getDescendantIds])
 
-  const createFolder = useCallback(async () => {
-    const name = prompt("请输入文件夹名称："); if (!name?.trim()) return
-    try { const res = await fetch("/api/folders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim(), parentId: null }) })
+  const handleCreateFolder = useCallback(async () => {
+    if (!folderFormName.trim()) return
+    try { const res = await fetch("/api/folders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: folderFormName.trim(), parentId: null }) })
       if (res.ok) { const fRes = await fetch("/api/folders"); if (fRes.ok) setFolders(await fRes.json()) } } catch {}
-  }, [])
+    setShowCreateFolder(false); setFolderFormName("")
+  }, [folderFormName])
 
-  const createBookmark = useCallback(async () => {
-    const url = prompt("请输入书签 URL："); if (!url) return
-    const title = prompt("请输入书签标题：")
-    try { const res = await fetch("/api/bookmarks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, url, folderId: selectedFolderId }) })
+  const handleCreateBookmark = useCallback(async () => {
+    if (!bmFormUrl.trim()) return
+    try { const res = await fetch("/api/bookmarks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: bmFormTitle.trim() || null, url: bmFormUrl.trim(), folderId: selectedFolderId }) })
       if (res.ok) { const bm = await res.json(); setBookmarks((prev) => [...prev, bm]) } } catch {}
-  }, [selectedFolderId])
+    setShowCreateBookmark(false); setBmFormUrl(""); setBmFormTitle("")
+  }, [selectedFolderId, bmFormUrl, bmFormTitle])
   const handleImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return; setImporting(true); setImportResult(null)
     try { const fd = new FormData(); fd.append("file", file); const r = await fetch("/api/bookmarks/import", { method: "POST", body: fd }); const d = await r.json()
@@ -175,8 +219,8 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
         <div {...(!selectMode ? { draggable: true, onDragStart: () => { draggedBmRef.current = bm.id; (window as any).__dragSrcFolder = bm.folderId }, onDragOver: (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = "move" }, onDrop: (e: React.DragEvent) => { e.stopPropagation(); const srcId = draggedBmRef.current; const srcFolder = (window as any).__dragSrcFolder; if (!srcId || srcId === bm.id || srcFolder !== bm.folderId) return; setBookmarks((prev) => { const fb = prev.filter((x) => x.folderId === bm.folderId); const si = fb.findIndex((x) => x.id === srcId); const di = fb.findIndex((x) => x.id === bm.id); if (si < 0 || di < 0) return prev; const item = prev.find((x) => x.id === srcId)!; fb.splice(si, 1); fb.splice(di, 0, item); handleReorder(bm.folderId, fb.map((x) => x.id)); return prev.map((x) => ({ ...x, order: fb.findIndex((y) => y.id === x.id) })) }); draggedBmRef.current = null; setDragOverFolderId(null) }, onDragEnd: () => { draggedBmRef.current = null; setDragOverFolderId(null) } } : {})} className="flex flex-1 cursor-pointer items-center min-w-0" onClick={() => { if (!selectMode) window.open(bm.url, "_blank") }}>
           <span className="truncate text-sm font-medium">{bm.title || bm.url}</span>
         </div>
-        {!selectMode && (<><button onClick={(e) => editBookmark(bm.id, e)} className="shrink-0 p-1.5 text-muted-foreground/40 opacity-0 hover:text-foreground group-hover:opacity-100"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button>
-        <button onClick={(e) => deleteBookmark(bm.id, e)} className="shrink-0 p-1.5 text-muted-foreground/40 opacity-0 hover:text-destructive group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button></>)}
+        {!selectMode && (<><button onClick={(e) => { e.stopPropagation(); openEditBookmark(bm) }} className="shrink-0 p-1.5 text-muted-foreground/40 opacity-0 hover:text-foreground group-hover:opacity-100"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button>
+        <button onClick={(e) => handleDeleteBookmark(bm.id, e)} className="shrink-0 p-1.5 text-muted-foreground/40 opacity-0 hover:text-destructive group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button></>)}
       </div>
     )
   }
@@ -190,7 +234,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
           <div {...dragProps(f.id)} className={`group flex items-center gap-1 px-3 py-1.5 ${isOver(f.id) ? "bg-primary/10" : ""}`}>
             <button onClick={() => toggleCollapse(f.id)} className="p-0.5 text-muted-foreground/60 hover:text-foreground">{isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}</button>
             <FolderIcon className="h-4 w-4 shrink-0" style={{ color: f.color || undefined }} /><span className="text-sm text-muted-foreground">{f.name}</span><span className="text-xs text-muted-foreground/40">{bms.length}</span>
-            <button onClick={(e) => editFolder(f.id, e)} className="p-1 text-muted-foreground/30 opacity-0 hover:text-foreground group-hover:opacity-100" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => deleteFolder(f.id, e)} className="ml-auto p-1 text-muted-foreground/30 opacity-0 hover:text-destructive group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>
+            <button onClick={(e) => { e.stopPropagation(); openEditFolder(f) }} className="p-1 text-muted-foreground/30 opacity-0 hover:text-foreground group-hover:opacity-100" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(f.id, e)} className="ml-auto p-1 text-muted-foreground/30 opacity-0 hover:text-destructive group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>
           </div>
           {!isCollapsed && (<div className="ml-4 pl-2" style={{ borderLeft: "1px solid var(--border)" }}>{bms.map(renderBookmarkRow)}{renderSubFoldersInCard(f.id, depth + 1)}</div>)}
         </div>
@@ -218,7 +262,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             <button onClick={() => { setSelectedBmIds(new Set()); setSelectMode(false) }} className="text-xs text-muted-foreground hover:text-foreground">取消</button>
             <span className="text-xs text-muted-foreground">已选 {selectedBmIds.size} 项</span>
             <div className="ml-auto flex gap-2">
-              <button onClick={deleteSelectedBookmarks} disabled={selectedBmIds.size === 0} className="px-3 py-1.5 text-xs font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50">删除选中</button>
+              <button onClick={() => setDeleteConfirm({ type: "selected" })} disabled={selectedBmIds.size === 0} className="px-3 py-1.5 text-xs font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50">删除选中</button>
               <button onClick={() => { const f = prompt("目标文件夹 ID（留空=未分类）："); moveMultipleBookmarks(Array.from(selectedBmIds), f || null) }} disabled={selectedBmIds.size === 0} className="px-3 py-1.5 text-xs font-medium border hover:bg-muted disabled:opacity-50">移动到...</button>
             </div>
           </div>
@@ -246,7 +290,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
                     <FolderIcon className="h-4 w-4 shrink-0" style={{ color: card.data.color || undefined }} />
                     <span className="text-sm font-semibold">{card.data.name}</span>
                     {(filteredBookmarksByFolder.get(card.data.id)?.length || 0) > 0 && <span className="text-xs text-muted-foreground/40">{filteredBookmarksByFolder.get(card.data.id)?.length}</span>}
-                    <button onClick={(e) => editFolder(card.data.id, e)} className="p-1 text-muted-foreground/30 opacity-0 hover:text-foreground group-hover:opacity-100" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => deleteFolder(card.data.id, e)} className="p-1 text-muted-foreground/30 opacity-0 hover:text-destructive group-hover:opacity-100" title="删除"><Trash2 className="h-3.5 w-3.5" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); openEditFolder(card.data) }} className="p-1 text-muted-foreground/30 opacity-0 hover:text-foreground group-hover:opacity-100" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(card.data.id, e)} className="p-1 text-muted-foreground/30 opacity-0 hover:text-destructive group-hover:opacity-100" title="删除"><Trash2 className="h-3.5 w-3.5" /></button>
                   </div>
                   {!isCollapsed && (<div className="pb-1">{(() => { const bms = filteredBookmarksByFolder.get(card.data.id) || []; const subs = childFoldersMap.get(card.data.id) || []; const hasSub = subs.some((sf) => { const sfb = filteredBookmarksByFolder.get(sf.id) || []; return sfb.length > 0 || (childFoldersMap.get(sf.id) || []).length > 0 }); if (bms.length === 0 && !hasSub) return <p className="px-4 py-6 text-xs text-muted-foreground/40">空文件夹</p>; return <>{bms.map(renderBookmarkRow)}{renderSubFoldersInCard(card.data.id)}</> })()}</div>)}
                   </>)}
@@ -269,7 +313,7 @@ function renderTreeSidebar() {
             <FolderIcon className="h-4 w-4 shrink-0" style={{ color: f.color || undefined }} /><span className="truncate">{f.name}</span>
             {(bookmarksByFolder.get(f.id)?.length || 0) > 0 && <span className="ml-auto text-xs text-muted-foreground/40">{bookmarksByFolder.get(f.id)?.length}</span>}
           </button>
-          <button onClick={(e) => editFolder(f.id, e)} className="p-1 text-muted-foreground/30 opacity-0 hover:text-foreground group-hover:opacity-100" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => deleteFolder(f.id, e)} className="shrink-0 p-1.5 text-muted-foreground/30 opacity-0 hover:text-destructive group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>
+          <button onClick={(e) => { e.stopPropagation(); openEditFolder(f) }} className="p-1 text-muted-foreground/30 opacity-0 hover:text-foreground group-hover:opacity-100" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(f.id, e)} className="shrink-0 p-1.5 text-muted-foreground/30 opacity-0 hover:text-destructive group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>
         </div></div>
         {isExpanded && children.length > 0 && <div>{renderTree(children, depth + 1)}</div>}</div>)
     })
@@ -302,7 +346,7 @@ function renderTreeSidebar() {
                   {bm.favicon ? <img src={bm.favicon} alt="" className="mt-0.5 h-5 w-5" /> : <Bookmark className="mt-0.5 h-5 w-5 shrink-0 text-primary/60" />}
                   <div className="min-w-0 flex-1"><h3 className="truncate text-sm font-medium">{bm.title || bm.url}</h3><p className="mt-0.5 truncate text-xs text-muted-foreground">{bm.url}</p></div>
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); deleteBookmark(bm.id, e) }} className="absolute right-2 top-2 p-1 text-muted-foreground/30 opacity-0 hover:text-destructive group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>
+                <button onClick={(e) => { e.stopPropagation(); handleDeleteBookmark(bm.id, e) }} className="absolute right-2 top-2 p-1 text-muted-foreground/30 opacity-0 hover:text-destructive group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>
               </div>
             ))}
           </div></div>)}
@@ -310,6 +354,119 @@ function renderTreeSidebar() {
       </div>
     )
   }
+
+  {/* Create Bookmark Dialog */}
+  <Dialog open={showCreateBookmark} onOpenChange={(o) => { if (!o) { setShowCreateBookmark(false); setBmFormUrl(""); setBmFormTitle("") } }}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>添加书签</DialogTitle>
+        <DialogDescription>输入书签的 URL 和标题</DialogDescription>
+      </DialogHeader>
+      <div className="grid gap-4 py-2">
+        <div className="grid gap-2">
+          <Label htmlFor="url">URL</Label>
+          <Input id="url" value={bmFormUrl} onChange={(e) => setBmFormUrl(e.target.value)} placeholder="https://example.com" />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="title">标题（可选）</Label>
+          <Input id="title" value={bmFormTitle} onChange={(e) => setBmFormTitle(e.target.value)} placeholder="书签标题" />
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => { setShowCreateBookmark(false); setBmFormUrl(""); setBmFormTitle("") }}>取消</Button>
+        <Button onClick={handleCreateBookmark} disabled={!bmFormUrl.trim()}>添加</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+
+  {/* Create Folder Dialog */}
+  <Dialog open={showCreateFolder} onOpenChange={(o) => { if (!o) { setShowCreateFolder(false); setFolderFormName("") } }}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>新建文件夹</DialogTitle>
+        <DialogDescription>输入文件夹名称</DialogDescription>
+      </DialogHeader>
+      <div className="grid gap-4 py-2">
+        <div className="grid gap-2">
+          <Label htmlFor="folderName">名称</Label>
+          <Input id="folderName" value={folderFormName} onChange={(e) => setFolderFormName(e.target.value)} placeholder="文件夹名称" onKeyDown={(e) => { if (e.key === "Enter") handleCreateFolder() }} />
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => { setShowCreateFolder(false); setFolderFormName("") }}>取消</Button>
+        <Button onClick={handleCreateFolder} disabled={!folderFormName.trim()}>创建</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+
+  {/* Edit Bookmark Dialog */}
+  <Dialog open={!!editingBookmark} onOpenChange={(o) => { if (!o) { setEditingBookmark(null); setBmFormUrl(""); setBmFormTitle("") } }}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>编辑书签</DialogTitle>
+        <DialogDescription>修改书签的 URL 和标题</DialogDescription>
+      </DialogHeader>
+      <div className="grid gap-4 py-2">
+        <div className="grid gap-2">
+          <Label htmlFor="editUrl">URL</Label>
+          <Input id="editUrl" value={bmFormUrl} onChange={(e) => setBmFormUrl(e.target.value)} />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="editTitle">标题</Label>
+          <Input id="editTitle" value={bmFormTitle} onChange={(e) => setBmFormTitle(e.target.value)} />
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => { setEditingBookmark(null); setBmFormUrl(""); setBmFormTitle("") }}>取消</Button>
+        <Button onClick={confirmEditBookmark} disabled={!bmFormUrl.trim()}>保存</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+
+  {/* Edit Folder Dialog */}
+  <Dialog open={!!editingFolder} onOpenChange={(o) => { if (!o) { setEditingFolder(null); setFolderFormName("") } }}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>编辑文件夹</DialogTitle>
+        <DialogDescription>修改文件夹名称</DialogDescription>
+      </DialogHeader>
+      <div className="grid gap-4 py-2">
+        <div className="grid gap-2">
+          <Label htmlFor="editFolderName">名称</Label>
+          <Input id="editFolderName" value={folderFormName} onChange={(e) => setFolderFormName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") confirmEditFolder() }} />
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => { setEditingFolder(null); setFolderFormName("") }}>取消</Button>
+        <Button onClick={confirmEditFolder} disabled={!folderFormName.trim()}>保存</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+
+  {/* Delete Confirmation AlertDialog */}
+  <AlertDialog open={!!deleteConfirm} onOpenChange={(o) => { if (!o) setDeleteConfirm(null) }}>
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>确认删除</AlertDialogTitle>
+        <AlertDialogDescription>
+          {deleteConfirm?.type === "bookmark" && "确定要删除这个书签吗？此操作不可撤销。"}
+          {deleteConfirm?.type === "folder" && "确定要删除这个文件夹及其所有子文件夹和书签吗？此操作不可撤销。"}
+          {deleteConfirm?.type === "selected" && ("确定要删除选中的 " + selectedBmIds.size + " 个书签吗？此操作不可撤销。")}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>取消</AlertDialogCancel>
+        <AlertDialogAction onClick={() => {
+          if (deleteConfirm?.type === "bookmark") confirmDeleteBookmark()
+          else if (deleteConfirm?.type === "folder") confirmDeleteFolder()
+          else if (deleteConfirm?.type === "selected") confirmDeleteSelected()
+        }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+          删除
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       <header className="flex items-center gap-2 px-4 py-2.5" style={{ borderBottom: "1px solid var(--border)", background: "var(--header-bg)" }}>
@@ -323,8 +480,8 @@ function renderTreeSidebar() {
           <button onClick={() => { setSelectMode(!selectMode); if (selectMode) setSelectedBmIds(new Set()) }}
             className={`p-1.5 transition-colors ${selectMode ? "text-primary" : "text-muted-foreground/60 hover:text-foreground"}`} title="多选模式"><CheckSquare className="h-4 w-4" /></button>
           <div className="mx-1 h-4 w-px bg-border/50" />
-          <button onClick={createBookmark} className="flex items-center gap-1 bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"><Plus className="h-3.5 w-3.5" /> 书签</button>
-          <button onClick={createFolder} className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"><FolderPlus className="h-3.5 w-3.5" /> 文件夹</button>
+          <button onClick={() => setShowCreateBookmark(true)} className="flex items-center gap-1 bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"><Plus className="h-3.5 w-3.5" /> 书签</button>
+          <button onClick={() => setShowCreateFolder(true)} className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"><FolderPlus className="h-3.5 w-3.5" /> 文件夹</button>
           <input ref={fileInputRef} type="file" accept=".html,.htm" onChange={handleImport} className="hidden" />
           <button onClick={() => fileInputRef.current?.click()} disabled={importing} className="px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50"><Upload className="h-3.5 w-3.5" /></button>
           <div className="relative group"><button className="px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted"><Download className="h-3.5 w-3.5" /></button>
@@ -340,38 +497,38 @@ function renderTreeSidebar() {
       {importResult && (<div className="px-6 py-2 text-sm bg-muted/30" style={{ borderBottom: "1px solid var(--border)" }}>{importResult}<button onClick={() => setImportResult(null)} className="ml-2 font-medium text-muted-foreground hover:text-foreground">关闭</button></div>)}
       <main className="flex-1 overflow-y-auto">{viewMode === "card" ? renderCardView() : renderTreeView()}</main>
 
-      {showDedup && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 pt-12" onClick={() => setShowDedup(false)}>
-          <div className="w-full max-w-2xl bg-card shadow-2xl" onClick={(e) => e.stopPropagation()} style={{ border: "1px solid var(--border)" }}>
-            <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
-              <h3 className="font-semibold">去重管理</h3>
-              <button onClick={() => setShowDedup(false)} className="p-1 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
-            </div>
-            <div className="max-h-[65vh] overflow-y-auto p-5">
-              {duplicates.length === 0 ? <p className="py-12 text-center text-sm text-muted-foreground">没有发现重复书签 🎉</p> : (
-                <div className="space-y-3">{duplicates.map((group, gi) => (
-                  <div key={gi} className="p-4" style={{ border: "1px solid var(--border)" }}>
-                    <p className="mb-2 truncate text-xs font-medium text-muted-foreground" title={group.url}>{group.url}</p>
-                    {group.bookmarks.map((bm: any) => (
-                      <label key={bm.id} className={`flex cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-muted ${selectedDedupIds.has(bm.id) ? "bg-destructive/5 line-through opacity-60" : ""}`}>
-                        <input type="checkbox" checked={selectedDedupIds.has(bm.id)} onChange={(e) => { setSelectedDedupIds((prev) => { const n = new Set(prev); e.target.checked ? n.add(bm.id) : n.delete(bm.id); return n }) }} className="shrink-0 accent-primary" />
-                        <span className="flex-1 truncate">{bm.title || bm.url}</span>
-                      </label>
-                    ))}
-                  </div>
-                ))}</div>
-              )}
-            </div>
-            {duplicates.length > 0 && (<div className="flex items-center justify-between px-5 py-3" style={{ borderTop: "1px solid var(--border)" }}>
-              <button onClick={() => { setSelectedDedupIds((prev) => { const n = new Set(prev); duplicates.forEach((g: any) => { g.bookmarks.slice(1).forEach((bm: any) => n.add(bm.id)) }); return n }) }} className="text-xs text-muted-foreground hover:text-foreground">保留每组第一个</button>
-              <div className="flex gap-2">
-                <button onClick={() => setSelectedDedupIds(new Set())} className="px-3 py-1.5 text-xs hover:bg-muted">取消选择</button>
-                <button onClick={handleDeleteDedup} disabled={selectedDedupIds.size === 0} className="bg-destructive px-3 py-1.5 text-xs font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50">删除选中 ({selectedDedupIds.size})</button>
-              </div>
-            </div>)}
+            <Dialog open={showDedup} onOpenChange={(o) => { if (!o) setShowDedup(false) }}>
+        <DialogContent className="max-w-2xl sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>去重管理</DialogTitle>
+            <DialogDescription>选择要删除的重复书签</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[55vh] overflow-y-auto">
+            {duplicates.length === 0 ? <p className="py-12 text-center text-sm text-muted-foreground">没有发现重复书签 🎉</p> : (
+              <div className="space-y-3">{duplicates.map((group, gi) => (
+                <div key={gi} className="rounded-lg border p-4">
+                  <p className="mb-2 truncate text-xs font-medium text-muted-foreground" title={group.url}>{group.url}</p>
+                  {group.bookmarks.map((bm: any) => (
+                    <label key={bm.id} className={"flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-muted " + (selectedDedupIds.has(bm.id) ? "bg-destructive/5 line-through opacity-60" : "")}>
+                      <input type="checkbox" checked={selectedDedupIds.has(bm.id)} onChange={(e) => { setSelectedDedupIds((prev) => { const n = new Set(prev); e.target.checked ? n.add(bm.id) : n.delete(bm.id); return n }) }} className="shrink-0 accent-primary" />
+                      <span className="flex-1 truncate">{bm.title || bm.url}</span>
+                    </label>
+                  ))}
+                </div>
+              ))}</div>
+            )}
           </div>
-        </div>
-      )}
+          {duplicates.length > 0 && (
+            <div className="flex items-center justify-between border-t pt-4">
+              <Button variant="ghost" size="sm" onClick={() => { setSelectedDedupIds((prev) => { const n = new Set(prev); duplicates.forEach((g: any) => { g.bookmarks.slice(1).forEach((bm: any) => n.add(bm.id)) }); return n }) }}>保留每组第一个</Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setSelectedDedupIds(new Set())}>取消选择</Button>
+                <Button size="sm" className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={handleDeleteDedup} disabled={selectedDedupIds.size === 0}>删除选中 ({selectedDedupIds.size})</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
