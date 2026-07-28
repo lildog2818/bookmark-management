@@ -7,11 +7,12 @@ import {
   Plus, Search, LogOut, Bookmark,
   Folder as FolderIcon, ChevronRight, ChevronDown, ChevronUp,
   Upload, Download, Trash2, X, Sun, Moon,
-  FolderPlus, ExternalLink, LayoutGrid, PanelLeftClose, CheckSquare,
+  FolderPlus, ExternalLink, LayoutGrid, PanelLeftClose, CheckSquare, Scan, Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import {
   Dialog,
   DialogContent,
@@ -488,7 +489,7 @@ function renderTreeSidebar() {
             <div className="absolute right-0 top-full z-50 mt-1 hidden w-28 bg-card py-1 shadow group-hover:block" style={{ border: "1px solid var(--border)" }}>
               <a href="/api/bookmarks/export?format=html" className="block px-3 py-1.5 text-xs hover:bg-muted">导出 HTML</a>
               <a href="/api/bookmarks/export?format=json" className="block px-3 py-1.5 text-xs hover:bg-muted">导出 JSON</a></div></div>
-          <button onClick={handleDetectDuplicates} disabled={dedupLoading} className="px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /></button>
+          <Tooltip><TooltipTrigger onClick={handleDetectDuplicates} disabled={dedupLoading} className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50 transition-colors">{dedupLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Scan className="h-3.5 w-3.5" />}<span className="hidden sm:inline">去重</span></TooltipTrigger><TooltipContent>检测并清理重复书签</TooltipContent></Tooltip>
           <div className="mx-1 h-4 w-px bg-border/50" />
           <button onClick={toggleTheme} className="p-1.5 text-muted-foreground/60 hover:text-foreground">{theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>
           <button onClick={() => signOut()} className="p-1.5 text-muted-foreground/60 hover:text-foreground"><LogOut className="h-4 w-4" /></button>
