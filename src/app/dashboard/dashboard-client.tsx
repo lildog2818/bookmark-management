@@ -103,6 +103,22 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     })
   }
 
+  const createFolder = useCallback(async () => {
+    const name = prompt("请输入文件夹名称：")
+    if (!name || !name.trim()) return
+    try {
+      const res = await fetch("/api/folders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), parentId: null }),
+      })
+      if (res.ok) {
+        const folder = await res.json()
+        setFolders((prev) => [...prev, folder])
+      }
+    } catch {}
+  }, [])
+
   const createBookmark = useCallback(async () => {
     const url = prompt("请输入书签 URL：")
     if (!url) return
@@ -428,7 +444,11 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
 
           <button onClick={createBookmark}
             className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow-md">
-            <Plus className="h-3.5 w-3.5" /> 新建
+            <Plus className="h-3.5 w-3.5" /> 书签
+          </button>
+          <button onClick={createFolder}
+            className="flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+            <FolderPlus className="h-3.5 w-3.5" /> 文件夹
           </button>
 
           <input ref={fileInputRef} type="file" accept=".html,.htm" onChange={handleImport} className="hidden" />
