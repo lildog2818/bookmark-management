@@ -101,18 +101,17 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     e.stopPropagation()
     const f = folders.find((x) => x.id === id)
     if (!f) return
-    const name = prompt("\u4fee\u6539\u6587\u4ef6\u5939\u540d\u79f0\uff1a", f.name)
-    if (name === null) return
-    const priorityStr = prompt("\u4f18\u5148\u7ea7\uff081-100\uff0c\u6570\u503c\u8d8a\u5927\u663e\u793a\u8d8a\u9760\u524d\uff09\uff1a", String(f.priority ?? 0))
-    if (priorityStr === null) return
-    const priority = parseInt(priorityStr, 10)
-    if (isNaN(priority)) return
+    const input = prompt("Edit folder (name | priority):", f.name + " | " + (f.priority != null ? f.priority : 0))
+    if (input === null) return
+    const parts = input.split("|").map((s) => s.trim())
+    const name = parts[0] || f.name
+    const priority = parts[1] !== undefined ? parseInt(parts[1], 10) : (f.priority != null ? f.priority : 0)
+    if (parts[1] !== undefined && isNaN(priority)) return
     try {
-      await fetch("/api/folders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name: name.trim(), priority }) })
-      setFolders((prev) => prev.map((x) => x.id === id ? { ...x, name: name.trim(), priority } : x))
+      await fetch("/api/folders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name, priority }) })
+      setFolders((prev) => prev.map((x) => x.id === id ? { ...x, name, priority } : x))
     } catch {}
   }, [folders])
-
   const deleteFolder = useCallback(async (id: string, e: React.MouseEvent) => {
     e.stopPropagation(); if (!confirm("确认删除这个文件夹及其所有书签？")) return
     try {
