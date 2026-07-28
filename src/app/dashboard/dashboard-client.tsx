@@ -7,7 +7,7 @@ import {
   Plus, Search, LogOut, Bookmark,
   Folder as FolderIcon, ChevronRight, ChevronDown, ChevronUp,
   Upload, Download, Trash2, X, Sun, Moon,
-  FolderPlus, ExternalLink, LayoutGrid, PanelLeftClose, CheckSquare, Scan, Loader2,
+  FolderPlus, ExternalLink, LayoutGrid, PanelLeftClose, CheckSquare, Scan, Loader2, Globe,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,6 +43,8 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks)
   const [viewMode, setViewMode] = useState<ViewMode>("card")
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
+  const [webQuery, setWebQuery] = useState("")
+  const [webEngine, setWebEngine] = useState("google")
   const [searchQuery, setSearchQuery] = useState("")
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState<string | null>(null)
@@ -251,6 +253,9 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
 
   const dragCardRef = useRef<string | null>(null)
 
+  const handleWebSearch = useCallback((e: React.KeyboardEvent) => { if (e.key === 'Enter' && webQuery.trim()) { window.open(searchEngines[webEngine as keyof typeof searchEngines].url + encodeURIComponent(webQuery.trim()), '_blank'); setWebQuery('') } }, [webQuery, webEngine])
+
+  const searchEngines = { google: { name: "Google", url: "https://www.google.com/search?q=" }, bing: { name: "Bing", url: "https://www.bing.com/search?q=" }, duckduckgo: { name: "DuckDuckGo", url: "https://duckduckgo.com/?q=" }, baidu: { name: "百度", url: "https://www.baidu.com/s?wd=" } }
   function renderCardView() {
     if (filteredBookmarks.length === 0) {
       return (<div className="flex h-full items-center justify-center"><div className="text-center"><Bookmark className="mx-auto h-12 w-12 text-muted-foreground/30" /><p className="mt-4 text-sm text-muted-foreground">{searchQuery ? "没有找到匹配的书签" : "还没有书签"}</p></div></div>)
@@ -542,6 +547,11 @@ function renderTreeSidebar() {
     </div>
   )
 }
+
+
+
+
+
 
 
 
