@@ -73,6 +73,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const [bmFormUrl, setBmFormUrl] = useState("")
   const [bmFormTitle, setBmFormTitle] = useState("")
   const [folderFormName, setFolderFormName] = useState("")
+  const [folderPriority, setFolderPriority] = useState(0)
 
   const rootFolders = folders.filter((f) => !f.parentId).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))
   const childFoldersMap = new Map<string, Folder[]>()
@@ -140,18 +141,18 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   }
 
   const openEditFolder = useCallback((f: Folder) => {
-    setFolderFormName(f.name); setEditingFolder(f); setShowEditFolder(true)
+    setFolderFormName(f.name); setFolderPriority(f.priority ?? 0); setEditingFolder(f); setShowEditFolder(true)
   }, [])
 
   const confirmEditFolder = useCallback(async () => {
     if (!editingFolder) return
     const id = editingFolder.id
     try {
-      await fetch("/api/folders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name: folderFormName.trim(), priority: editingFolder.priority }) })
+      await fetch("/api/folders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name: folderFormName.trim(), priority: folderPriority }) })
       setFolders((prev) => prev.map((x) => x.id === id ? { ...x, name: folderFormName.trim() } : x))
     } catch {}
-    setShowEditFolder(false); setEditingFolder(null); setFolderFormName("")
-  }, [editingFolder, folderFormName])
+    setShowEditFolder(false); setEditingFolder(null); setFolderFormName(""); setFolderPriority(0)
+  }, [editingFolder, folderFormName, folderPriority])
   const handleDeleteFolder = useCallback(async (id: string, e: React.MouseEvent) => {
     e.stopPropagation(); setDeleteConfirm({ type: "folder", id })
   }, [])
@@ -491,7 +492,7 @@ function renderTreeSidebar() {
   </Dialog>
 
   {/* Edit Folder Dialog */}
-  <Dialog open={showEditFolder} onOpenChange={(o) => { if (!o) { setShowEditFolder(false); setEditingFolder(null); setFolderFormName("") } }}>
+  <Dialog open={showEditFolder} onOpenChange={(o) => { if (!o) { setShowEditFolder(false); setEditingFolder(null); setFolderFormName(""); setFolderPriority(0) } }}>
     <DialogContent>
       <DialogHeader>
         <DialogTitle>编辑文件夹</DialogTitle>
@@ -502,9 +503,14 @@ function renderTreeSidebar() {
           <Label htmlFor="editFolderName">名称</Label>
           <Input id="editFolderName" value={folderFormName} onChange={(e) => setFolderFormName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") confirmEditFolder() }} />
         </div>
+        <div className="grid gap-2">
+          <Label htmlFor="folderPriority">优先级</Label>
+          <Input id="folderPriority" type="number" value={folderPriority} onChange={(e) => setFolderPriority(parseInt(e.target.value) || 0)} />
+          <p className="text-xs text-muted-foreground">数字越大，排序越靠前</p>
+        </div>
       </div>
       <DialogFooter>
-        <Button variant="outline" onClick={() => { setShowEditFolder(false); setEditingFolder(null); setFolderFormName("") }}>取消</Button>
+        <Button variant="outline" onClick={() => { setShowEditFolder(false); setEditingFolder(null); setFolderFormName(""); setFolderPriority(0) }}>取消</Button>
         <Button onClick={confirmEditFolder} disabled={!folderFormName.trim()}>保存</Button>
       </DialogFooter>
     </DialogContent>
