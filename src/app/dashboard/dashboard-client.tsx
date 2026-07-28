@@ -38,6 +38,8 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const [newFolderName, setNewFolderName] = useState("")
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState<string | null>(null)
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null)
+  const draggedBookmarkRef = useRef<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const filteredBookmarks = bookmarks.filter((b) => {
@@ -99,6 +101,24 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     }
   }, [selectedFolderId])
 
+  const moveBookmark = useCallback(async (bookmarkId: string, targetFolderId: string | null) => {
+    // Optimistic update
+    setBookmarks((prev) =>
+      prev.map((b) => (b.id === bookmarkId ? { ...b, folderId: targetFolderId } : b))
+    )
+    try {
+      await fetch("/api/bookmarks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: bookmarkId, folderId: targetFolderId }),
+      })
+    } catch {
+      // Revert on failure - refresh from server
+      const res = await fetch("/api/bookmarks")
+      if (res.ok) setBookmarks(await res.json())
+    }
+  }, [])
+
   const handleImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -142,6 +162,20 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
 
       return (
         <div key={folder.id}>
+          <div
+            onDragOver={(e) => {
+              e.preventDefault()
+              e.dataTransfer.dropEffect = "move"
+              setDragOverFolderId(folder.id)
+            }}
+            onDragLeave={(e) => setDragOverFolderId(null)}
+            onDrop={(e) => {
+              e.preventDefault()
+              const id = draggedBookmarkRef.current
+              if (id) moveBookmark(id, folder.id)
+              setDragOverFolderId(null)
+            }}
+          >
           <button
             onClick={() => {
               setSelectedFolderId(folder.id)
@@ -149,7 +183,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             }}
             className={`flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-sm hover:bg-muted ${
               isSelected ? "bg-muted font-medium" : ""
-            }`}
+            } ${dragOverFolderId === folder.id ? "ring-2 ring-primary" : ""}`}
             style={{ paddingLeft: `${12 + depth * 16}px` }}
           >
             {hasChildren ? (
@@ -160,6 +194,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             <FolderIcon className="h-4 w-4 shrink-0" style={{ color: folder.color || undefined }} />
             <span className="truncate">{folder.name}</span>
           </button>
+          </div>
           {hasChildren && isExpanded && (
             <div>{renderFolderTree(children, depth + 1)}</div>
           )}
@@ -184,15 +219,30 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
         </div>
 
         <div className="flex-1 overflow-y-auto p-2">
+          <div
+            onDragOver={(e) => {
+              e.preventDefault()
+              e.dataTransfer.dropEffect = "move"
+              setDragOverFolderId("__root__")
+            }}
+            onDragLeave={() => setDragOverFolderId(null)}
+            onDrop={(e) => {
+              e.preventDefault()
+              const id = draggedBookmarkRef.current
+              if (id) moveBookmark(id, null)
+              setDragOverFolderId(null)
+            }}
+          >
           <button
             onClick={() => { setSelectedFolderId(null); setSearchQuery("") }}
             className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted ${
               !selectedFolderId && !searchQuery ? "bg-muted font-medium" : ""
-            }`}
+            } ${dragOverFolderId === "__root__" ? "ring-2 ring-primary" : ""}`}
           >
             <Bookmark className="h-4 w-4" />
             全部书签
           </button>
+          </div>
 
           <div className="mt-2">
             <div className="flex items-center justify-between px-3 py-1">
@@ -319,12 +369,19 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {filteredBookmarks.map((bookmark) => (
-                <a
+                <div
                   key={bookmark.id}
-                  href={bookmark.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group rounded-lg border p-4 hover:border-primary/50 hover:bg-muted/50 transition-colors"
+                  draggable
+                  onDragStart={(e) => {
+                    draggedBookmarkRef.current = bookmark.id
+                    e.dataTransfer.effectAllowed = "move"
+                  }}
+                  onDragEnd={() => {
+                    draggedBookmarkRef.current = null
+                    setDragOverFolderId(null)
+                  }}
+                  onClick={() => window.open(bookmark.url, "_blank")}
+                  className="cursor-pointer rounded-lg border p-4 hover:border-primary/50 hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex items-start gap-3">
                     {bookmark.favicon ? (
@@ -346,7 +403,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
                       )}
                     </div>
                   </div>
-                </a>
+                </div>
               ))}
             </div>
           )}

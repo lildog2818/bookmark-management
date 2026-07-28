@@ -50,3 +50,26 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: "删除失败" }, { status: 500 })
   }
 }
+
+export async function PATCH(req: Request) {
+  const session = await auth()
+  if (!session?.user?.id) return NextResponse.json({ error: "未登录" }, { status: 401 })
+
+  try {
+    const { id, folderId } = await req.json()
+    if (!id) return NextResponse.json({ error: "缺少书签 ID" }, { status: 400 })
+
+    const bookmark = await prisma.bookmark.updateMany({
+      where: { id, userId: session.user.id },
+      data: { folderId: folderId || null },
+    })
+
+    if (bookmark.count === 0) {
+      return NextResponse.json({ error: "书签不存在或无权限" }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch {
+    return NextResponse.json({ error: "更新失败" }, { status: 500 })
+  }
+}
