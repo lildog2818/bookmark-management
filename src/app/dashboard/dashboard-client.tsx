@@ -223,8 +223,8 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
         <div {...(!selectMode ? { draggable: true, onDragStart: () => { draggedBmRef.current = bm.id; (window as any).__dragSrcFolder = bm.folderId }, onDragOver: (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = "move" }, onDrop: (e: React.DragEvent) => { e.stopPropagation(); const srcId = draggedBmRef.current; const srcFolder = (window as any).__dragSrcFolder; if (!srcId || srcId === bm.id || srcFolder !== bm.folderId) return; setBookmarks((prev) => { const fb = prev.filter((x) => x.folderId === bm.folderId); const si = fb.findIndex((x) => x.id === srcId); const di = fb.findIndex((x) => x.id === bm.id); if (si < 0 || di < 0) return prev; const item = prev.find((x) => x.id === srcId)!; fb.splice(si, 1); fb.splice(di, 0, item); handleReorder(bm.folderId, fb.map((x) => x.id)); return prev.map((x) => ({ ...x, order: fb.findIndex((y) => y.id === x.id) })) }); draggedBmRef.current = null; setDragOverFolderId(null) }, onDragEnd: () => { draggedBmRef.current = null; setDragOverFolderId(null) } } : {})} className="flex flex-1 cursor-pointer items-center min-w-0" onClick={() => { if (!selectMode) window.open(bm.url, "_blank") }}>
           <span className="truncate text-sm font-medium">{bm.title || bm.url}</span>
         </div>
-        {!selectMode && (<><button onClick={(e) => { e.stopPropagation(); openEditBookmark(bm) }} className="shrink-0 p-1.5 text-muted-foreground/40 opacity-100 hover:text-foreground"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button>
-        <button onClick={(e) => handleDeleteBookmark(bm.id, e)} className="shrink-0 p-1.5 text-muted-foreground/40 opacity-100 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button></>)}
+        {!selectMode && (<><button onClick={(e) => { e.stopPropagation(); openEditBookmark(bm) }} className="shrink-0 p-1.5 text-muted-foreground/40 opacity-0 group-hover:opacity-100 hover:text-foreground"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button>
+        <button onClick={(e) => handleDeleteBookmark(bm.id, e)} className="shrink-0 p-1.5 text-muted-foreground/40 opacity-0 group-hover:opacity-100 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button></>)}
       </div>
     )
   }
@@ -350,7 +350,7 @@ function renderTreeSidebar() {
                   {bm.favicon ? <img src={bm.favicon} alt="" className="mt-0.5 h-5 w-5" /> : <Bookmark className="mt-0.5 h-5 w-5 shrink-0 text-primary/60" />}
                   <div className="min-w-0 flex-1"><h3 className="truncate text-sm font-medium">{bm.title || bm.url}</h3><p className="mt-0.5 truncate text-xs text-muted-foreground">{bm.url}</p></div>
                 </div>
-                <div className="absolute right-2 top-2 flex gap-1"><button onClick={(e) => { e.stopPropagation(); openEditBookmark(bm) }} className="p-1 text-muted-foreground/30 opacity-100 hover:text-foreground"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => { e.stopPropagation(); handleDeleteBookmark(bm.id, e) }} className="p-1 text-muted-foreground/30 opacity-100 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button></div>
+                <div className="absolute right-2 top-2 flex gap-1"><button onClick={(e) => { e.stopPropagation(); openEditBookmark(bm) }} className="p-1 text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-foreground"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => { e.stopPropagation(); handleDeleteBookmark(bm.id, e) }} className="p-1 text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button></div>
               </div>
             ))}
           </div></div>)}
@@ -542,6 +542,7 @@ function renderTreeSidebar() {
     </div>
   )
 }
+
 
 
 
