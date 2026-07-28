@@ -157,20 +157,45 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const isOver = (id: string) => dragOverFolderId === id
 
   // ── 卡片视图 ──
+  const handleReorder = useCallback(async (folderId: string | null, bmIds: string[]) => {
+    try { await fetch("/api/bookmarks/reorder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderId, bookmarkIds: bmIds }) }) } catch {}
+  }, [])
+
   function renderBookmarkRow(bm: Bookmark) {
     return (
       <div key={bm.id} draggable
-        onDragStart={() => { draggedBmRef.current = bm.id }}
+        onDragStart={() => { draggedBmRef.current = bm.id; (window as any).__dragSrcFolder = bm.folderId }}
+        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move" }}
+        onDrop={(e) => {
+          e.stopPropagation()
+          const srcId = draggedBmRef.current
+          const srcFolder = (window as any).__dragSrcFolder
+          if (!srcId || srcId === bm.id) return
+          if (srcFolder === bm.folderId) {
+            setBookmarks((prev) => {
+              const folderBms = prev.filter((x) => x.folderId === bm.folderId)
+              const srcIdx = folderBms.findIndex((x) => x.id === srcId)
+              const dstIdx = folderBms.findIndex((x) => x.id === bm.id)
+              if (srcIdx < 0 || dstIdx < 0) return prev
+              const item = prev.find((x) => x.id === srcId)!
+              folderBms.splice(srcIdx, 1)
+              folderBms.splice(dstIdx, 0, item)
+              const ids = folderBms.map((x) => x.id)
+              handleReorder(bm.folderId, ids)
+              return prev.map((x) => ({ ...x, order: ids.indexOf(x.id) }))
+            })
+          }
+          draggedBmRef.current = null; setDragOverFolderId(null)
+        }}
         onDragEnd={() => { draggedBmRef.current = null; setDragOverFolderId(null) }}
-        className="group flex items-center gap-3 px-3 py-2 hover:bg-muted/40 cursor-grab active:cursor-grabbing">
-        <div onClick={() => window.open(bm.url, "_blank")} className="flex flex-1 cursor-pointer items-center gap-3 min-w-0">
-          {bm.favicon ? <img src={bm.favicon} alt="" className="h-4 w-4 shrink-0" /> : <Bookmark className="h-4 w-4 shrink-0 text-primary/50" />}
-          <span className="flex-1 truncate text-sm font-medium">{bm.title || bm.url}</span>
+        className="group flex items-center px-3 py-2 hover:bg-muted/40 cursor-grab active:cursor-grabbing border-b border-border/30 last:border-0">
+        <div onClick={() => window.open(bm.url, "_blank")} className="flex flex-1 cursor-pointer items-center min-w-0">
+          <span className="truncate text-sm font-medium">{bm.title || bm.url}</span>
         </div>
-        <button onClick={(e) => editBookmark(bm.id, e)} className="shrink-0 p-1 text-muted-foreground/30 opacity-0 hover:text-foreground group-hover:opacity-100" title="编辑">
+        <button onClick={(e) => editBookmark(bm.id, e)} className="shrink-0 p-1.5 text-muted-foreground/40 opacity-0 hover:text-foreground group-hover:opacity-100 transition-opacity" title="编辑">
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
         </button>
-        <button onClick={(e) => deleteBookmark(bm.id, e)} className="shrink-0 p-1 text-muted-foreground/30 opacity-0 hover:text-destructive group-hover:opacity-100" title="删除">
+        <button onClick={(e) => deleteBookmark(bm.id, e)} className="shrink-0 p-1.5 text-muted-foreground/40 opacity-0 hover:text-destructive group-hover:opacity-100 transition-opacity" title="删除">
           <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
@@ -282,6 +307,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
         return (
           <div key={f.id}>
             <div {...dragProps(f.id)} className={`group flex items-center ${isOver(f.id) ? "bg-primary/10" : ""}`}>
+              <div className="group flex items-center">
               <button onClick={() => { setSelectedFolderId(f.id); if (children.length > 0) toggleExpand(f.id) }}
                 className={`flex w-full items-center gap-1 px-2 py-1.5 text-sm hover:bg-muted ${isSelected ? "bg-muted font-medium text-foreground" : "text-muted-foreground"}`}
                 style={{ paddingLeft: `${8 + depth * 14}px` }}>
@@ -290,6 +316,8 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
                 <span className="truncate">{f.name}</span>
                 {(bookmarksByFolder.get(f.id)?.length || 0) > 0 && <span className="ml-auto text-xs text-muted-foreground/40">{bookmarksByFolder.get(f.id)?.length}</span>}
               </button>
+              <button onClick={(e) => deleteFolder(f.id, e)} className="shrink-0 p-1.5 text-muted-foreground/30 opacity-0 hover:text-destructive group-hover:opacity-100 transition-opacity" title="删除文件夹"><Trash2 className="h-3.5 w-3.5" /></button>
+              </div>
             </div>
             {isExpanded && children.length > 0 && <div>{renderTree(children, depth + 1)}</div>}
           </div>
