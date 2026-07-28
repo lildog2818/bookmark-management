@@ -208,7 +208,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             </div>
           </div>
         )}
-        <div className="px-4 py-6 lg:px-8" style={{ columnCount: 3, columnGap: "1.25rem" }}>
+        <div className="flex flex-wrap gap-5 px-4 py-6 lg:px-8" style={{ alignItems: "flex-start" }}>
           {allCards.map((card, ci) => {
             const isFolder = card.type === "folder"
             const cardId = isFolder ? card.data.id : "__root__"
@@ -241,10 +241,10 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             } : {})}
             {...dragProps(cardId)}
                 className={`bg-card transition-shadow ${isOver(cardId) ? "ring-2 ring-primary" : ""} ${isFolder ? "cursor-grab active:cursor-grabbing" : ""}`}
-                style={{ border: "1px solid var(--border)", breakInside: "avoid-column", marginBottom: "1.25rem" }}>
+                style={{ border: "1px solid var(--border)", width: "calc((100% - 2 * 1.25rem) / 3)", minWidth: "280px", flex: "1 1 280px" }}>
                 {card.type === "root" ? (
-                  <><div className="flex items-center gap-2 px-4 pt-3 pb-2" style={{ borderBottom: isCollapsed ? "none" : "1px solid var(--border)" }}>
-                    <Bookmark className="h-4 w-4 text-muted-foreground/50" /><span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">未分类</span><span className="ml-auto text-xs text-muted-foreground/40">{card.data.length}</span>
+                  <><div className="flex items-center gap-2 px-4 pt-3 pb-2 cursor-pointer hover:bg-muted/20" onClick={() => setCollapsedCards((prev) => { const n = new Set(prev); n.has("__root__") ? n.delete("__root__") : n.add("__root__"); return n })} style={{ borderBottom: isCollapsed ? "none" : "1px solid var(--border)" }}>
+                    <button onClick={(e) => { e.stopPropagation(); setCollapsedCards((prev) => { const n = new Set(prev); n.has("__root__") ? n.delete("__root__") : n.add("__root__"); return n }) }} className="p-0.5 text-muted-foreground/50 hover:text-foreground">{isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</button><Bookmark className="h-4 w-4 text-muted-foreground/50" /><span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">未分类</span><span className="ml-auto text-xs text-muted-foreground/40">{card.data.length}</span>
                   </div>{!isCollapsed && <div className="pb-1">{card.data.map(renderBookmarkRow)}</div>}</>
                 ) : (
                   <><div className="group flex items-center gap-2 px-4 pt-3 pb-2 cursor-pointer hover:bg-muted/20" onClick={() => setCollapsedCards((prev) => { const n = new Set(prev); n.has(card.data.id) ? n.delete(card.data.id) : n.add(card.data.id); return n })}
