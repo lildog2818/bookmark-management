@@ -57,7 +57,21 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     catch { const r = await fetch("/api/bookmarks"); if (r.ok) setBookmarks(await r.json()) }
   }, [])
 
-  const deleteBookmark = useCallback(async (id: string, e: React.MouseEvent) => {
+  const editBookmark = useCallback(async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const bm = bookmarks.find((b) => b.id === id)
+    if (!bm) return
+    const title = prompt("修改书签名称：", bm.title)
+    if (title === null) return
+    const url = prompt("修改书签 URL：", bm.url)
+    if (url === null) return
+    try {
+      const res = await fetch("/api/bookmarks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, title: title.trim(), url: url.trim() }) })
+      if (res.ok) setBookmarks((prev) => prev.map((b) => b.id === id ? { ...b, title: title.trim(), url: url.trim() } : b))
+    } catch {}
+  }, [bookmarks])
+
+    const deleteBookmark = useCallback(async (id: string, e: React.MouseEvent) => {
     e.stopPropagation(); if (!confirm("确认删除这个书签？")) return
     try { await fetch("/api/bookmarks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); setBookmarks((prev) => prev.filter((b) => b.id !== id)) } catch {}
   }, [])
@@ -138,10 +152,11 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
         className="group flex items-center gap-3 px-3 py-2 hover:bg-muted/40 cursor-grab active:cursor-grabbing">
         <div onClick={() => window.open(bm.url, "_blank")} className="flex flex-1 cursor-pointer items-center gap-3 min-w-0">
           {bm.favicon ? <img src={bm.favicon} alt="" className="h-4 w-4 shrink-0" /> : <Bookmark className="h-4 w-4 shrink-0 text-primary/50" />}
-          <span className="flex-1 truncate text-sm">{bm.title || bm.url}</span>
-          <span className="hidden truncate text-xs text-muted-foreground/50 md:block max-w-[200px]">{bm.url}</span>
-          {bm.description && <span className="hidden truncate text-xs text-muted-foreground/40 lg:block max-w-[160px]">{bm.description}</span>}
+          <span className="flex-1 truncate text-sm font-medium">{bm.title || bm.url}</span>
         </div>
+        <button onClick={(e) => editBookmark(bm.id, e)} className="shrink-0 p-1 text-muted-foreground/30 opacity-0 hover:text-foreground group-hover:opacity-100" title="编辑">
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+        </button>
         <button onClick={(e) => deleteBookmark(bm.id, e)} className="shrink-0 p-1 text-muted-foreground/30 opacity-0 hover:text-destructive group-hover:opacity-100" title="删除">
           <Trash2 className="h-3.5 w-3.5" />
         </button>
