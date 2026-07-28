@@ -65,6 +65,8 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const [showCreateFolder, setShowCreateFolder] = useState(false)
   const [editingBookmark, setEditingBookmark] = useState<Bookmark | null>(null)
   const [editingFolder, setEditingFolder] = useState<Folder | null>(null)
+  const [showEditBookmark, setShowEditBookmark] = useState(false)
+  const [showEditFolder, setShowEditFolder] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: "bookmark" | "folder" | "selected"; id?: string } | null>(null)
 
   // Form states
@@ -99,7 +101,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   }, [])
 
   const openEditBookmark = useCallback((bm: Bookmark) => {
-    setBmFormUrl(bm.url); setBmFormTitle(bm.title || ""); setEditingBookmark(bm)
+    setBmFormUrl(bm.url); setBmFormTitle(bm.title || ""); setEditingBookmark(bm); setShowEditBookmark(true)
   }, [])
 
   const confirmEditBookmark = useCallback(async () => {
@@ -109,7 +111,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
       const res = await fetch("/api/bookmarks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, title: bmFormTitle.trim(), url: bmFormUrl.trim() }) })
       if (res.ok) setBookmarks((prev) => prev.map((b) => b.id === id ? { ...b, title: bmFormTitle.trim(), url: bmFormUrl.trim() } : b))
     } catch {}
-    setEditingBookmark(null); setBmFormUrl(""); setBmFormTitle("")
+    setShowEditBookmark(false); setEditingBookmark(null); setBmFormUrl(""); setBmFormTitle("")
   }, [editingBookmark, bmFormUrl, bmFormTitle])
 
   const handleDeleteBookmark = useCallback(async (id: string, e: React.MouseEvent) => {
@@ -138,7 +140,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   }
 
   const openEditFolder = useCallback((f: Folder) => {
-    setFolderFormName(f.name); setEditingFolder(f)
+    setFolderFormName(f.name); setEditingFolder(f); setShowEditFolder(true)
   }, [])
 
   const confirmEditFolder = useCallback(async () => {
@@ -148,7 +150,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
       await fetch("/api/folders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name: folderFormName.trim(), priority: editingFolder.priority }) })
       setFolders((prev) => prev.map((x) => x.id === id ? { ...x, name: folderFormName.trim() } : x))
     } catch {}
-    setEditingFolder(null); setFolderFormName("")
+    setShowEditFolder(false); setEditingFolder(null); setFolderFormName("")
   }, [editingFolder, folderFormName])
   const handleDeleteFolder = useCallback(async (id: string, e: React.MouseEvent) => {
     e.stopPropagation(); setDeleteConfirm({ type: "folder", id })
@@ -401,7 +403,7 @@ function renderTreeSidebar() {
   </Dialog>
 
   {/* Edit Bookmark Dialog */}
-  <Dialog open={!!editingBookmark} onOpenChange={(o) => { if (!o) { setEditingBookmark(null); setBmFormUrl(""); setBmFormTitle("") } }}>
+  <Dialog open={showEditBookmark} onOpenChange={(o) => { if (!o) { setShowEditBookmark(false); setEditingBookmark(null); setBmFormUrl(""); setBmFormTitle("") } }}>
     <DialogContent>
       <DialogHeader>
         <DialogTitle>编辑书签</DialogTitle>
@@ -418,14 +420,14 @@ function renderTreeSidebar() {
         </div>
       </div>
       <DialogFooter>
-        <Button variant="outline" onClick={() => { setEditingBookmark(null); setBmFormUrl(""); setBmFormTitle("") }}>取消</Button>
+        <Button variant="outline" onClick={() => { setShowEditBookmark(false); setEditingBookmark(null); setBmFormUrl(""); setBmFormTitle("") }}>取消</Button>
         <Button onClick={confirmEditBookmark} disabled={!bmFormUrl.trim()}>保存</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>
 
   {/* Edit Folder Dialog */}
-  <Dialog open={!!editingFolder} onOpenChange={(o) => { if (!o) { setEditingFolder(null); setFolderFormName("") } }}>
+  <Dialog open={showEditFolder} onOpenChange={(o) => { if (!o) { setShowEditFolder(false); setEditingFolder(null); setFolderFormName("") } }}>
     <DialogContent>
       <DialogHeader>
         <DialogTitle>编辑文件夹</DialogTitle>
@@ -438,7 +440,7 @@ function renderTreeSidebar() {
         </div>
       </div>
       <DialogFooter>
-        <Button variant="outline" onClick={() => { setEditingFolder(null); setFolderFormName("") }}>取消</Button>
+        <Button variant="outline" onClick={() => { setShowEditFolder(false); setEditingFolder(null); setFolderFormName("") }}>取消</Button>
         <Button onClick={confirmEditFolder} disabled={!folderFormName.trim()}>保存</Button>
       </DialogFooter>
     </DialogContent>
