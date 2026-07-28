@@ -79,6 +79,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   // Form states
   const [bmFormUrl, setBmFormUrl] = useState("")
   const [bmFormTitle, setBmFormTitle] = useState("")
+  const [bmFormFolderId, setBmFormFolderId] = useState<string | null>(null)
   const [folderFormName, setFolderFormName] = useState("")
   const [folderPriority, setFolderPriority] = useState(0)
 
@@ -185,9 +186,9 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
 
   const handleCreateBookmark = useCallback(async () => {
     if (!bmFormUrl.trim()) return
-    try { const res = await fetch("/api/bookmarks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: bmFormTitle.trim() || null, url: bmFormUrl.trim(), folderId: selectedFolderId }) })
+    try { const res = await fetch("/api/bookmarks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: bmFormTitle.trim() || null, url: bmFormUrl.trim(), folderId: bmFormFolderId }) })
       if (res.ok) { const bm = await res.json(); setBookmarks((prev) => [...prev, bm]) } } catch { console.error('API err') }
-    setShowCreateBookmark(false); setBmFormUrl(""); setBmFormTitle("")
+    setShowCreateBookmark(false); setBmFormUrl(""); setBmFormTitle(""); setBmFormFolderId(null)
   }, [selectedFolderId, bmFormUrl, bmFormTitle])
   const handleImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return; setImporting(true); setImportResult(null)
@@ -459,7 +460,7 @@ function renderTreeSidebar() {
         </DialogContent>
       </Dialog>
   {/* Create Bookmark Dialog */}
-  <Dialog open={showCreateBookmark} onOpenChange={(o) => { if (!o) { setShowCreateBookmark(false); setBmFormUrl(""); setBmFormTitle("") } }}>
+  <Dialog open={showCreateBookmark} onOpenChange={(o) => { if (!o) { setShowCreateBookmark(false); setBmFormUrl(""); setBmFormTitle(""); setBmFormFolderId(null) } }}>
     <DialogContent>
       <DialogHeader>
         <DialogTitle>添加书签</DialogTitle>
@@ -474,9 +475,19 @@ function renderTreeSidebar() {
           <Label htmlFor="title">标题（可选）</Label>
           <Input id="title" value={bmFormTitle} onChange={(e) => setBmFormTitle(e.target.value)} placeholder="书签标题" />
         </div>
+        <div className="grid gap-2">
+          <Label htmlFor="folderSelect">文件夹</Label>
+          <select id="folderSelect" value={bmFormFolderId ?? ""} onChange={(e) => setBmFormFolderId(e.target.value || null)}
+            className="w-full rounded-lg border border-input bg-transparent px-3 py-2.5 text-sm ring-offset-background transition-colors focus:outline-none focus:ring-2 focus:ring-ring">
+            <option value="">未分类</option>
+            {folders.filter((f) => !f.parentId).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0)).map((f) => (
+              <option key={f.id} value={f.id}>{f.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
       <DialogFooter>
-        <Button variant="outline" onClick={() => { setShowCreateBookmark(false); setBmFormUrl(""); setBmFormTitle("") }}>取消</Button>
+        <Button variant="outline" onClick={() => { setShowCreateBookmark(false); setBmFormUrl(""); setBmFormTitle(""); setBmFormFolderId(null) }}>取消</Button>
         <Button onClick={handleCreateBookmark} disabled={!bmFormUrl.trim()}>添加</Button>
       </DialogFooter>
     </DialogContent>
