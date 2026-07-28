@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from "react"
 import { signOut } from "next-auth/react"
-import { FolderPlus, Plus, Search, LogOut, Bookmark, Folder as FolderIcon, ChevronRight, ChevronDown, Upload, Download } from "lucide-react"
+import { FolderPlus, Plus, Search, LogOut, Bookmark, Folder as FolderIcon, ChevronRight, ChevronDown, Upload, Download, Trash2, X } from "lucide-react"
 
 interface Folder {
   id: string
@@ -41,6 +41,10 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null)
   const draggedBookmarkRef = useRef<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showDedup, setShowDedup] = useState(false)
+  const [duplicates, setDuplicates] = useState<any[]>([])
+  const [selectedDedupIds, setSelectedDedupIds] = useState<Set<string>>(new Set())
+  const [dedupLoading, setDedupLoading] = useState(false)
 
   const filteredBookmarks = bookmarks.filter((b) => {
     const matchFolder = selectedFolderId ? b.folderId === selectedFolderId : true
@@ -152,6 +156,46 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
       if (fileInputRef.current) fileInputRef.current.value = ""
     }
   }, [])
+
+  const handleDetectDuplicates = useCallback(async () => {
+    setDedupLoading(true)
+    try {
+      const res = await fetch("/api/bookmarks/detect-duplicates", { method: "POST" })
+      if (res.ok) {
+        const data = await res.json()
+        setDuplicates(data.duplicates || [])
+        setSelectedDedupIds(new Set())
+        setShowDedup(true)
+      }
+    } catch {}
+    setDedupLoading(false)
+  }, [])
+
+  const handleDeleteDedup = useCallback(async () => {
+    if (selectedDedupIds.size === 0) return
+    const ids = Array.from(selectedDedupIds)
+    try {
+      await Promise.all(
+        ids.map((id) =>
+          fetch("/api/bookmarks", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id }),
+          })
+        )
+      )
+      setBookmarks((prev) => prev.filter((b) => !selectedDedupIds.has(b.id)))
+      setDuplicates((prev) =>
+        prev
+          .map((g) => ({
+            ...g,
+            bookmarks: g.bookmarks.filter((b: any) => !selectedDedupIds.has(b.id)),
+          }))
+          .filter((g: any) => g.bookmarks.length > 1)
+      )
+      setSelectedDedupIds(new Set())
+    } catch {}
+  }, [selectedDedupIds])
 
   function renderFolderTree(folderList: Folder[], depth = 0) {
     return folderList.map((folder) => {
@@ -342,6 +386,14 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
               </a>
             </div>
           </div>
+          <button
+            onClick={handleDetectDuplicates}
+            disabled={dedupLoading}
+            className="flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50"
+          >
+            <Trash2 className="h-4 w-4" />
+            {dedupLoading ? "检测中..." : "去重管理"}
+          </button>
         </header>
 
         {importResult && (
@@ -409,6 +461,91 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
           )}
         </div>
       </main>
+      {showDedup && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 pt-12">
+          <div className="w-full max-w-2xl rounded-lg border bg-card shadow-xl">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <h3 className="font-semibold">去重管理</h3>
+              <button onClick={() => setShowDedup(false)} className="rounded-md p-1 hover:bg-muted">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-[70vh] overflow-y-auto p-4">
+              {duplicates.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">没有发现重复书签</p>
+              ) : (
+                <div className="space-y-4">
+                  {duplicates.map((group, gi) => (
+                    <div key={gi} className="rounded-md border p-3">
+                      <p className="mb-2 truncate text-xs text-muted-foreground" title={group.url}>
+                        {group.url}
+                      </p>
+                      <div className="space-y-1">
+                        {group.bookmarks.map((bm: any) => (
+                          <label
+                            key={bm.id}
+                            className={`flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted ${
+                              selectedDedupIds.has(bm.id) ? "bg-destructive/10 opacity-60 line-through" : ""
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedDedupIds.has(bm.id)}
+                              onChange={(e) => {
+                                setSelectedDedupIds((prev) => {
+                                  const next = new Set(prev)
+                                  if (e.target.checked) next.add(bm.id)
+                                  else next.delete(bm.id)
+                                  return next
+                                })
+                              }}
+                              className="shrink-0"
+                            />
+                            <span className="flex-1 truncate">{bm.title || bm.url}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {duplicates.length > 0 && (
+              <div className="flex items-center justify-between border-t px-4 py-3">
+                <button
+                  onClick={() => {
+                    setSelectedDedupIds((prev) => {
+                      const next = new Set(prev)
+                      duplicates.forEach((g: any) => {
+                        g.bookmarks.slice(1).forEach((bm: any) => next.add(bm.id))
+                      })
+                      return next
+                    })
+                  }}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  保留每组第一个
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSelectedDedupIds(new Set())}
+                    className="rounded-md border px-3 py-1.5 text-sm hover:bg-muted"
+                  >
+                    取消选择
+                  </button>
+                  <button
+                    onClick={handleDeleteDedup}
+                    disabled={selectedDedupIds.size === 0}
+                    className="rounded-md bg-destructive px-3 py-1.5 text-sm text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+                  >
+                    删除选中 ({selectedDedupIds.size})
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
