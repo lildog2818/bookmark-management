@@ -271,7 +271,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             </div>
           </div>
         )}
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="flex flex-wrap" style={{ gap: "1.25rem" }}>
           {allCards.map((card, ci) => {
             const isFolder = card.type === "folder"
             const cardId = isFolder ? card.data.id : "__root__"
@@ -279,7 +279,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             return (
               <div key={isFolder ? card.data.id : "root"}
                         {...dragProps(cardId)}
-                className={`bg-card transition-shadow ${isOver(cardId) ? "ring-2 ring-primary" : ""} ${isFolder ? "cursor-grab active:cursor-grabbing" : ""}`}
+                className={`bg-card transition-shadow ${isOver(cardId) ? "ring-2 ring-primary" : ""} ${isFolder ? "cursor-grab active:cursor-grabbing" : ""} w-full sm:w-1/2 lg:w-1/3`}
                 style={{ border: "1px solid var(--border)" }}>
                 {card.type === "root" ? (
                   <><div className="flex items-center gap-2 px-4 pt-3 pb-2 cursor-pointer hover:bg-muted/20" onClick={() => setCollapsedCards((prev) => { const n = new Set(prev); n.has("__root__") ? n.delete("__root__") : n.add("__root__"); return n })} style={{ borderBottom: isCollapsed ? "none" : "1px solid var(--border)" }}>
@@ -542,4 +542,9 @@ function renderTreeSidebar() {
     </div>
   )
 }
+
+
+
+
+
 
