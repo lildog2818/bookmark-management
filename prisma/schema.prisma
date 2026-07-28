@@ -27,6 +27,7 @@ model Folder {
   userId   String
   parentId String?
   order   Int      @default(0)
+  priority Int     @default(0)
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   parent   Folder?  @relation("FolderTree", fields: [parentId], references: [id])
