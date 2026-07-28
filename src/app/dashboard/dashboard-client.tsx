@@ -223,30 +223,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
 
   function renderBookmarkRow(bm: Bookmark) {
     const isSel = selectedBmIds.has(bm.id)
-    {/* Add Search Engine Dialog */}
-  <Dialog open={showAddEngine} onOpenChange={(o) => { if (!o) { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>添加搜索引擎</DialogTitle>
-        <DialogDescription>输入搜索引擎名称和搜索URL（用 {'{query}'} 表示关键词位置）</DialogDescription>
-      </DialogHeader>
-      <div className="grid gap-4 py-2">
-        <div className="grid gap-2">
-          <Label htmlFor="engineName">名称</Label>
-          <Input id="engineName" value={newEngineName} onChange={(e) => setNewEngineName(e.target.value)} placeholder="例如: 知乎" />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="engineUrl">搜索 URL</Label>
-          <Input id="engineUrl" value={newEngineUrl} onChange={(e) => setNewEngineUrl(e.target.value)} placeholder="例如: https://www.zhihu.com/search?q=" />
-          <p className="text-xs text-muted-foreground">输入搜索URL，{'{query}'} 会自动替换为关键词</p>
-        </div>
-      </div>
-      <DialogFooter>
-        <Button variant="outline" onClick={() => { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") }}>取消</Button>
-        <Button onClick={() => { if (newEngineName.trim() && newEngineUrl.trim()) { const id = "custom_" + Date.now(); setCustomEngines((prev) => [...prev, { id, name: newEngineName.trim(), url: newEngineUrl.trim() }]); setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }} disabled={!newEngineName.trim() || !newEngineUrl.trim()}>添加</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
+
 
   return (
       <div key={bm.id} className={`group flex items-center px-3 py-2 border-b border-border/30 last:border-0 ${isSel ? "bg-primary/5" : "hover:bg-muted/40"}`}>
@@ -371,12 +348,12 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   return (
       <div className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
         {/* Web Search */}
-        <div className="mb-4 flex items-center gap-2 py-2 px-3 bg-muted/30 rounded-lg" style={{ border: "1px solid var(--border)" }}>
+        <div className="mb-4 flex items-center gap-2 py-2 px-3 bg-muted/30 rounded-lg" style={{ border: "1px solid var(--border)", maxWidth: "520px" }}>
           <Globe className="h-4 w-4 text-muted-foreground/50 shrink-0" />
           <input type="text" value={webQuery} onChange={(e) => setWebQuery(e.target.value)} onKeyDown={handleWebSearch}
-            placeholder="搜索网页..." className="flex-1 bg-transparent px-2 py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground/50" />
+            placeholder="搜索网页..." className="flex-1 bg-transparent px-2 py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground/70" />
           <select value={webEngine} onChange={(e) => setWebEngine(e.target.value)}
-            className="bg-transparent text-xs text-muted-foreground/60 outline-none cursor-pointer py-1 px-2 rounded hover:bg-muted/50">
+            className="bg-transparent text-xs text-foreground outline-none cursor-pointer py-1 px-2 rounded hover:bg-muted/50">
             <option value="google">Google</option>
             <option value="bing">Bing</option>
             <option value="duckduckgo">DuckDuckGo</option>
@@ -615,7 +592,7 @@ function renderTreeSidebar() {
       <header className="flex items-center gap-2 px-4 py-2.5" style={{ borderBottom: "1px solid var(--border)", background: "var(--header-bg)" }}>
         <h1 className="mr-2 hidden text-sm font-bold tracking-tight sm:block"><span className="text-primary">Bookmark</span></h1>
         <div className="relative flex-1 max-w-sm"><Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
-          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索书签..." className="w-full bg-muted/50 px-3 py-1.5 pl-9 text-sm outline-none focus:bg-muted transition-colors placeholder:text-muted-foreground/50" /></div>
+          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索书签..." className="w-full bg-muted/50 px-3 py-1.5 pl-9 text-sm outline-none focus:bg-muted transition-colors placeholder:text-muted-foreground/70" /></div>
         <span className="whitespace-nowrap text-xs text-muted-foreground/60">{filteredBookmarks.length}/{bookmarks.length}</span>
         <div className="flex items-center gap-1">
           <button onClick={() => setViewMode(viewMode === "card" ? "tree" : "card")} className="p-1.5 text-muted-foreground/60 hover:text-foreground" title={viewMode === "card" ? "文件夹" : "卡片"}>
@@ -765,6 +742,31 @@ function renderTreeSidebar() {
     </DialogContent>
   </Dialog>
 
+
+    {/* Add Search Engine Dialog */}
+  <Dialog open={showAddEngine} onOpenChange={(o) => { if (!o) { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>添加搜索引擎</DialogTitle>
+        <DialogDescription>输入搜索引擎名称和搜索URL（用 {'{query}'} 表示关键词位置）</DialogDescription>
+      </DialogHeader>
+      <div className="grid gap-4 py-2">
+        <div className="grid gap-2">
+          <Label htmlFor="engineName">名称</Label>
+          <Input id="engineName" value={newEngineName} onChange={(e) => setNewEngineName(e.target.value)} placeholder="例如: 知乎" />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="engineUrl">搜索 URL</Label>
+          <Input id="engineUrl" value={newEngineUrl} onChange={(e) => setNewEngineUrl(e.target.value)} placeholder="例如: https://www.zhihu.com/search?q=" />
+          <p className="text-xs text-muted-foreground">输入搜索URL，{'{query}'} 会自动替换为关键词</p>
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") }}>取消</Button>
+        <Button onClick={() => { if (newEngineName.trim() && newEngineUrl.trim()) { const id = "custom_" + Date.now(); setCustomEngines((prev) => [...prev, { id, name: newEngineName.trim(), url: newEngineUrl.trim() }]); setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }} disabled={!newEngineName.trim() || !newEngineUrl.trim()}>添加</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
   {/* Delete Confirmation AlertDialog */}
   <AlertDialog open={!!deleteConfirm} onOpenChange={(o) => { if (!o) setDeleteConfirm(null) }}>
     <AlertDialogContent>
@@ -791,6 +793,7 @@ function renderTreeSidebar() {
     </div>
   )
 }
+
 
 
 
