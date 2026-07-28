@@ -58,6 +58,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [showDedup, setShowDedup] = useState(false)
+  const [showMoveDialog, setShowMoveDialog] = useState(false)
   const [duplicates, setDuplicates] = useState<any[]>([])
   const [selectedDedupIds, setSelectedDedupIds] = useState<Set<string>>(new Set())
   const [dedupLoading, setDedupLoading] = useState(false)
@@ -117,7 +118,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     try {
       const res = await fetch("/api/bookmarks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, title: bmFormTitle.trim(), url: bmFormUrl.trim() }) })
       if (res.ok) setBookmarks((prev) => prev.map((b) => b.id === id ? { ...b, title: bmFormTitle.trim(), url: bmFormUrl.trim() } : b))
-    } catch {}
+    } catch { console.error('API err') }
     setShowEditBookmark(false); setEditingBookmark(null); setBmFormUrl(""); setBmFormTitle("")
   }, [editingBookmark, bmFormUrl, bmFormTitle])
 
@@ -128,23 +129,23 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const confirmDeleteBookmark = useCallback(async () => {
     if (!deleteConfirm || deleteConfirm.type !== "bookmark" || !deleteConfirm.id) return
     const id = deleteConfirm.id
-    try { await fetch("/api/bookmarks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); setBookmarks((prev) => prev.filter((b) => b.id !== id)) } catch {}
+    try { await fetch("/api/bookmarks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); setBookmarks((prev) => prev.filter((b) => b.id !== id)) } catch { console.error('API err') }
     setDeleteConfirm(null)
   }, [deleteConfirm])
 
   const confirmDeleteSelected = useCallback(async () => {
     if (!deleteConfirm || deleteConfirm.type !== "selected") return
-    try { await Promise.all(Array.from(selectedBmIds).map((id) => fetch("/api/bookmarks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }))) } catch {}
+    try { await Promise.all(Array.from(selectedBmIds).map((id) => fetch("/api/bookmarks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }))) } catch { console.error('API err') }
     setBookmarks((prev) => prev.filter((b) => !selectedBmIds.has(b.id)))
     setSelectedBmIds(new Set()); setSelectMode(false)
     setDeleteConfirm(null)
   }, [selectedBmIds, deleteConfirm])
 
-  const getDescendantIds = (parentId: string): string[] => {
+  const getDescendantIds = useCallback((parentId: string): string[] => {
     const ids: string[] = []; const children = childFoldersMap.get(parentId) || []
     for (const child of children) { ids.push(child.id); ids.push(...getDescendantIds(child.id)) }
     return ids
-  }
+  }, [childFoldersMap])
 
   const openEditFolder = useCallback((f: Folder) => {
     setFolderFormName(f.name); setFolderPriority(f.priority ?? 0); setEditingFolder(f); setShowEditFolder(true)
@@ -156,7 +157,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     try {
       await fetch("/api/folders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name: folderFormName.trim(), priority: folderPriority }) })
       setFolders((prev) => prev.map((x) => x.id === id ? { ...x, name: folderFormName.trim(), priority: folderPriority } : x))
-    } catch {}
+    } catch { console.error('API err') }
     setShowEditFolder(false); setEditingFolder(null); setFolderFormName(""); setFolderPriority(0)
   }, [editingFolder, folderFormName, folderPriority])
   const handleDeleteFolder = useCallback(async (id: string, e: React.MouseEvent) => {
@@ -171,21 +172,21 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
       await Promise.all(allIds.map((fid) => fetch("/api/folders", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: fid }) })))
       const fRes = await fetch("/api/folders"); if (fRes.ok) setFolders(await fRes.json())
       const bRes = await fetch("/api/bookmarks"); if (bRes.ok) setBookmarks(await bRes.json())
-    } catch {}
+    } catch { console.error('API err') }
     setDeleteConfirm(null)
   }, [deleteConfirm, getDescendantIds])
 
   const handleCreateFolder = useCallback(async () => {
     if (!folderFormName.trim()) return
     try { const res = await fetch("/api/folders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: folderFormName.trim(), parentId: null }) })
-      if (res.ok) { const fRes = await fetch("/api/folders"); if (fRes.ok) setFolders(await fRes.json()) } } catch {}
+      if (res.ok) { const fRes = await fetch("/api/folders"); if (fRes.ok) setFolders(await fRes.json()) } } catch { console.error('API err') }
     setShowCreateFolder(false); setFolderFormName("")
   }, [folderFormName])
 
   const handleCreateBookmark = useCallback(async () => {
     if (!bmFormUrl.trim()) return
     try { const res = await fetch("/api/bookmarks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: bmFormTitle.trim() || null, url: bmFormUrl.trim(), folderId: selectedFolderId }) })
-      if (res.ok) { const bm = await res.json(); setBookmarks((prev) => [...prev, bm]) } } catch {}
+      if (res.ok) { const bm = await res.json(); setBookmarks((prev) => [...prev, bm]) } } catch { console.error('API err') }
     setShowCreateBookmark(false); setBmFormUrl(""); setBmFormTitle("")
   }, [selectedFolderId, bmFormUrl, bmFormTitle])
   const handleImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,14 +198,14 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
 
   const handleDetectDuplicates = useCallback(async () => {
     setDedupLoading(true)
-    try { const r = await fetch("/api/bookmarks/detect-duplicates", { method: "POST" }); if (r.ok) { const d = await r.json(); setDuplicates(d.duplicates || []); setSelectedDedupIds(new Set()); setShowDedup(true) } } catch {}
+    try { const r = await fetch("/api/bookmarks/detect-duplicates", { method: "POST" }); if (r.ok) { const d = await r.json(); setDuplicates(d.duplicates || []); setSelectedDedupIds(new Set()); setShowDedup(true) } } catch { console.error('API err') }
     setDedupLoading(false)
   }, [])
 
   const handleDeleteDedup = useCallback(async () => {
     if (selectedDedupIds.size === 0) return
     const ids = Array.from(selectedDedupIds)
-    try { await Promise.all(ids.map((id) => fetch("/api/bookmarks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }))) } catch {}
+    try { await Promise.all(ids.map((id) => fetch("/api/bookmarks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }))) } catch { console.error('API err') }
     setBookmarks((prev) => prev.filter((b) => !selectedDedupIds.has(b.id)))
     setDuplicates((prev) => prev.map((g) => ({ ...g, bookmarks: g.bookmarks.filter((b: any) => !selectedDedupIds.has(b.id)) })).filter((g: any) => g.bookmarks.length > 1))
     setSelectedDedupIds(new Set())
@@ -218,7 +219,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const isOver = (id: string) => dragOverFolderId === id
 
   const handleReorder = useCallback(async (folderId: string | null, bmIds: string[]) => {
-    try { await fetch("/api/bookmarks/reorder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderId, bookmarkIds: bmIds }) }) } catch {}
+    try { await fetch("/api/bookmarks/reorder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderId, bookmarkIds: bmIds }) }) } catch { console.error('API err') }
   }, [])
 
   function renderBookmarkRow(bm: Bookmark) {
@@ -255,7 +256,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     })
   }
     const handleFolderReorder = useCallback(async (fIds: string[]) => {
-    try { await fetch("/api/folders/reorder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderIds: fIds }) }) } catch {}
+    try { await fetch("/api/folders/reorder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderIds: fIds }) }) } catch { console.error('API err') }
   }, [])
 
   const dragCardRef = useRef<string | null>(null)
@@ -296,7 +297,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             <span className="text-xs text-muted-foreground">已选 {selectedBmIds.size} 项</span>
             <div className="ml-auto flex gap-2">
               <button onClick={() => setDeleteConfirm({ type: "selected" })} disabled={selectedBmIds.size === 0} className="px-3 py-1.5 text-xs font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50">删除选中</button>
-              <button onClick={() => { const f = prompt("目标文件夹 ID（留空=未分类）："); moveMultipleBookmarks(Array.from(selectedBmIds), f || null) }} disabled={selectedBmIds.size === 0} className="px-3 py-1.5 text-xs font-medium border hover:bg-muted disabled:opacity-50">移动到...</button>
+              setShowMoveDialog(true)
             </div>
           </div>
         )}
@@ -576,6 +577,30 @@ function renderTreeSidebar() {
       </DialogFooter>
     </DialogContent>
   </Dialog>
+  {/* Move to Folder Dialog */}
+  <Dialog open={showMoveDialog} onOpenChange={(o) => { if (!o) setShowMoveDialog(false) }}>
+    <DialogContent className="sm:max-w-sm">
+      <DialogHeader>
+        <DialogTitle>移动到文件夹</DialogTitle>
+        <DialogDescription>选择目标文件夹</DialogDescription>
+      </DialogHeader>
+      <div className="max-h-60 overflow-y-auto -mx-4 px-4">
+        <button onClick={() => { moveMultipleBookmarks(Array.from(selectedBmIds), null); setShowMoveDialog(false) }}
+          className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-md transition-colors">未分类</button>
+        {folders.filter((f) => !f.parentId).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0)).map((f) => (
+          <button key={f.id} onClick={() => { moveMultipleBookmarks(Array.from(selectedBmIds), f.id); setShowMoveDialog(false) }}
+            className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-md transition-colors flex items-center gap-2">
+            <FolderIcon className="h-4 w-4 shrink-0" style={{ color: f.color || undefined }} />
+            <span>{f.name}</span>
+          </button>
+        ))}
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => setShowMoveDialog(false)}>取消</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+
 {/* Delete Confirmation AlertDialog */}
   <AlertDialog open={!!deleteConfirm} onOpenChange={(o) => { if (!o) setDeleteConfirm(null) }}>
     <AlertDialogContent>
@@ -602,6 +627,7 @@ function renderTreeSidebar() {
     </div>
   )
 }
+
 
 
 
