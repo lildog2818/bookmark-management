@@ -5,9 +5,9 @@ import { signOut } from "next-auth/react"
 import { useTheme } from "@/lib/theme"
 import {
   Plus, Search, LogOut, Bookmark,
-  Folder as FolderIcon, ChevronRight, ChevronDown, ChevronUp,
+  Folder as FolderIcon, ChevronRight, ChevronDown,
   Upload, Download, Trash2, X, Sun, Moon,
-  FolderPlus, ExternalLink, LayoutGrid, PanelLeftClose, CheckSquare, Scan, Loader2, Globe,
+  FolderPlus, LayoutGrid, PanelLeftClose, CheckSquare, Scan, Loader2, Globe,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -241,30 +241,6 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     const children = childFoldersMap.get(parentId) || []
     return children.map((f) => {
       const bms = filteredBookmarksByFolder.get(f.id) || []; const isCollapsed = collapsedSubFolders.has(f.id)
-      {/* Add Search Engine Dialog */}
-  <Dialog open={showAddEngine} onOpenChange={(o) => { if (!o) { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>添加搜索引擎</DialogTitle>
-        <DialogDescription>输入搜索引擎名称和搜索URL（用 {'{query}'} 表示关键词位置）</DialogDescription>
-      </DialogHeader>
-      <div className="grid gap-4 py-2">
-        <div className="grid gap-2">
-          <Label htmlFor="engineName">名称</Label>
-          <Input id="engineName" value={newEngineName} onChange={(e) => setNewEngineName(e.target.value)} placeholder="例如: 知乎" />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="engineUrl">搜索 URL</Label>
-          <Input id="engineUrl" value={newEngineUrl} onChange={(e) => setNewEngineUrl(e.target.value)} placeholder="例如: https://www.zhihu.com/search?q=" />
-          <p className="text-xs text-muted-foreground">输入搜索URL，{'{query}'} 会自动替换为关键词</p>
-        </div>
-      </div>
-      <DialogFooter>
-        <Button variant="outline" onClick={() => { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") }}>取消</Button>
-        <Button onClick={() => { if (newEngineName.trim() && newEngineUrl.trim()) { const id = "custom_" + Date.now(); setCustomEngines((prev) => [...prev, { id, name: newEngineName.trim(), url: newEngineUrl.trim() }]); setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }} disabled={!newEngineName.trim() || !newEngineUrl.trim()}>添加</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
 
   return (
         <div key={f.id} style={{ marginLeft: `${depth * 16}px` }}>
@@ -289,30 +265,6 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const searchEngines = { google: { name: "Google", url: "https://www.google.com/search?q=" }, bing: { name: "Bing", url: "https://www.bing.com/search?q=" }, duckduckgo: { name: "DuckDuckGo", url: "https://duckduckgo.com/?q=" }, baidu: { name: "百度", url: "https://www.baidu.com/s?wd=" } }
   function renderCardView() {
     if (filteredBookmarks.length === 0) {
-      {/* Add Search Engine Dialog */}
-  <Dialog open={showAddEngine} onOpenChange={(o) => { if (!o) { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>添加搜索引擎</DialogTitle>
-        <DialogDescription>输入搜索引擎名称和搜索URL（用 {'{query}'} 表示关键词位置）</DialogDescription>
-      </DialogHeader>
-      <div className="grid gap-4 py-2">
-        <div className="grid gap-2">
-          <Label htmlFor="engineName">名称</Label>
-          <Input id="engineName" value={newEngineName} onChange={(e) => setNewEngineName(e.target.value)} placeholder="例如: 知乎" />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="engineUrl">搜索 URL</Label>
-          <Input id="engineUrl" value={newEngineUrl} onChange={(e) => setNewEngineUrl(e.target.value)} placeholder="例如: https://www.zhihu.com/search?q=" />
-          <p className="text-xs text-muted-foreground">输入搜索URL，{'{query}'} 会自动替换为关键词</p>
-        </div>
-      </div>
-      <DialogFooter>
-        <Button variant="outline" onClick={() => { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") }}>取消</Button>
-        <Button onClick={() => { if (newEngineName.trim() && newEngineUrl.trim()) { const id = "custom_" + Date.now(); setCustomEngines((prev) => [...prev, { id, name: newEngineName.trim(), url: newEngineUrl.trim() }]); setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }} disabled={!newEngineName.trim() || !newEngineUrl.trim()}>添加</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
 
   return (<div className="flex h-full items-center justify-center"><div className="text-center"><Bookmark className="mx-auto h-12 w-12 text-muted-foreground/30" /><p className="mt-4 text-sm text-muted-foreground">{searchQuery ? "没有找到匹配的书签" : "还没有书签"}</p></div></div>)
     }
@@ -320,30 +272,6 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
       ...rootFolders.map((f) => ({ type: "folder" as const, data: f })),
       ...(rootBookmarks.length > 0 ? [{ type: "root" as const, data: rootBookmarks }] : []),
     ]
-    {/* Add Search Engine Dialog */}
-  <Dialog open={showAddEngine} onOpenChange={(o) => { if (!o) { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>添加搜索引擎</DialogTitle>
-        <DialogDescription>输入搜索引擎名称和搜索URL（用 {'{query}'} 表示关键词位置）</DialogDescription>
-      </DialogHeader>
-      <div className="grid gap-4 py-2">
-        <div className="grid gap-2">
-          <Label htmlFor="engineName">名称</Label>
-          <Input id="engineName" value={newEngineName} onChange={(e) => setNewEngineName(e.target.value)} placeholder="例如: 知乎" />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="engineUrl">搜索 URL</Label>
-          <Input id="engineUrl" value={newEngineUrl} onChange={(e) => setNewEngineUrl(e.target.value)} placeholder="例如: https://www.zhihu.com/search?q=" />
-          <p className="text-xs text-muted-foreground">输入搜索URL，{'{query}'} 会自动替换为关键词</p>
-        </div>
-      </div>
-      <DialogFooter>
-        <Button variant="outline" onClick={() => { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") }}>取消</Button>
-        <Button onClick={() => { if (newEngineName.trim() && newEngineUrl.trim()) { const id = "custom_" + Date.now(); setCustomEngines((prev) => [...prev, { id, name: newEngineName.trim(), url: newEngineUrl.trim() }]); setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }} disabled={!newEngineName.trim() || !newEngineUrl.trim()}>添加</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
 
   return (
       <div className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
@@ -377,30 +305,6 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             const isFolder = card.type === "folder"
             const cardId = isFolder ? card.data.id : "__root__"
             const isCollapsed = collapsedCards.has(cardId)
-            {/* Add Search Engine Dialog */}
-  <Dialog open={showAddEngine} onOpenChange={(o) => { if (!o) { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>添加搜索引擎</DialogTitle>
-        <DialogDescription>输入搜索引擎名称和搜索URL（用 {'{query}'} 表示关键词位置）</DialogDescription>
-      </DialogHeader>
-      <div className="grid gap-4 py-2">
-        <div className="grid gap-2">
-          <Label htmlFor="engineName">名称</Label>
-          <Input id="engineName" value={newEngineName} onChange={(e) => setNewEngineName(e.target.value)} placeholder="例如: 知乎" />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="engineUrl">搜索 URL</Label>
-          <Input id="engineUrl" value={newEngineUrl} onChange={(e) => setNewEngineUrl(e.target.value)} placeholder="例如: https://www.zhihu.com/search?q=" />
-          <p className="text-xs text-muted-foreground">输入搜索URL，{'{query}'} 会自动替换为关键词</p>
-        </div>
-      </div>
-      <DialogFooter>
-        <Button variant="outline" onClick={() => { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") }}>取消</Button>
-        <Button onClick={() => { if (newEngineName.trim() && newEngineUrl.trim()) { const id = "custom_" + Date.now(); setCustomEngines((prev) => [...prev, { id, name: newEngineName.trim(), url: newEngineUrl.trim() }]); setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }} disabled={!newEngineName.trim() || !newEngineUrl.trim()}>添加</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
 
   return (
               <div key={isFolder ? card.data.id : "root"}
@@ -434,30 +338,6 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
 function renderTreeSidebar() {
     const renderTree = (list: Folder[], depth = 0) => list.map((f) => {
       const children = childFoldersMap.get(f.id) || []; const isExpanded = expandedFolders.has(f.id); const isSelected = selectedFolderId === f.id
-      {/* Add Search Engine Dialog */}
-  <Dialog open={showAddEngine} onOpenChange={(o) => { if (!o) { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>添加搜索引擎</DialogTitle>
-        <DialogDescription>输入搜索引擎名称和搜索URL（用 {'{query}'} 表示关键词位置）</DialogDescription>
-      </DialogHeader>
-      <div className="grid gap-4 py-2">
-        <div className="grid gap-2">
-          <Label htmlFor="engineName">名称</Label>
-          <Input id="engineName" value={newEngineName} onChange={(e) => setNewEngineName(e.target.value)} placeholder="例如: 知乎" />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="engineUrl">搜索 URL</Label>
-          <Input id="engineUrl" value={newEngineUrl} onChange={(e) => setNewEngineUrl(e.target.value)} placeholder="例如: https://www.zhihu.com/search?q=" />
-          <p className="text-xs text-muted-foreground">输入搜索URL，{'{query}'} 会自动替换为关键词</p>
-        </div>
-      </div>
-      <DialogFooter>
-        <Button variant="outline" onClick={() => { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") }}>取消</Button>
-        <Button onClick={() => { if (newEngineName.trim() && newEngineUrl.trim()) { const id = "custom_" + Date.now(); setCustomEngines((prev) => [...prev, { id, name: newEngineName.trim(), url: newEngineUrl.trim() }]); setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }} disabled={!newEngineName.trim() || !newEngineUrl.trim()}>添加</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
 
   return (<div key={f.id}><div {...dragProps(f.id)} className={`group flex items-center ${isOver(f.id) ? "bg-primary/10" : ""}`}>
         <div className="flex w-full items-center">
@@ -472,30 +352,6 @@ function renderTreeSidebar() {
         </div></div>
         {isExpanded && children.length > 0 && <div>{renderTree(children, depth + 1)}</div>}</div>)
     })
-    {/* Add Search Engine Dialog */}
-  <Dialog open={showAddEngine} onOpenChange={(o) => { if (!o) { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>添加搜索引擎</DialogTitle>
-        <DialogDescription>输入搜索引擎名称和搜索URL（用 {'{query}'} 表示关键词位置）</DialogDescription>
-      </DialogHeader>
-      <div className="grid gap-4 py-2">
-        <div className="grid gap-2">
-          <Label htmlFor="engineName">名称</Label>
-          <Input id="engineName" value={newEngineName} onChange={(e) => setNewEngineName(e.target.value)} placeholder="例如: 知乎" />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="engineUrl">搜索 URL</Label>
-          <Input id="engineUrl" value={newEngineUrl} onChange={(e) => setNewEngineUrl(e.target.value)} placeholder="例如: https://www.zhihu.com/search?q=" />
-          <p className="text-xs text-muted-foreground">输入搜索URL，{'{query}'} 会自动替换为关键词</p>
-        </div>
-      </div>
-      <DialogFooter>
-        <Button variant="outline" onClick={() => { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") }}>取消</Button>
-        <Button onClick={() => { if (newEngineName.trim() && newEngineUrl.trim()) { const id = "custom_" + Date.now(); setCustomEngines((prev) => [...prev, { id, name: newEngineName.trim(), url: newEngineUrl.trim() }]); setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }} disabled={!newEngineName.trim() || !newEngineUrl.trim()}>添加</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
 
   return (
       <aside className="hidden w-56 shrink-0 bg-sidebar-bg lg:flex lg:flex-col" style={{ borderRight: "1px solid var(--border)" }}>
@@ -513,30 +369,6 @@ function renderTreeSidebar() {
 
   function renderTreeView() {
     const display = selectedFolderId ? bookmarks.filter((b) => b.folderId === selectedFolderId && (!searchQuery || searchMatch(b))) : filteredBookmarks
-    {/* Add Search Engine Dialog */}
-  <Dialog open={showAddEngine} onOpenChange={(o) => { if (!o) { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>添加搜索引擎</DialogTitle>
-        <DialogDescription>输入搜索引擎名称和搜索URL（用 {'{query}'} 表示关键词位置）</DialogDescription>
-      </DialogHeader>
-      <div className="grid gap-4 py-2">
-        <div className="grid gap-2">
-          <Label htmlFor="engineName">名称</Label>
-          <Input id="engineName" value={newEngineName} onChange={(e) => setNewEngineName(e.target.value)} placeholder="例如: 知乎" />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="engineUrl">搜索 URL</Label>
-          <Input id="engineUrl" value={newEngineUrl} onChange={(e) => setNewEngineUrl(e.target.value)} placeholder="例如: https://www.zhihu.com/search?q=" />
-          <p className="text-xs text-muted-foreground">输入搜索URL，{'{query}'} 会自动替换为关键词</p>
-        </div>
-      </div>
-      <DialogFooter>
-        <Button variant="outline" onClick={() => { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") }}>取消</Button>
-        <Button onClick={() => { if (newEngineName.trim() && newEngineUrl.trim()) { const id = "custom_" + Date.now(); setCustomEngines((prev) => [...prev, { id, name: newEngineName.trim(), url: newEngineUrl.trim() }]); setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }} disabled={!newEngineName.trim() || !newEngineUrl.trim()}>添加</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
 
   return (
       <div className="flex flex-1 overflow-hidden">
@@ -562,30 +394,6 @@ function renderTreeSidebar() {
 
 
 
-  {/* Add Search Engine Dialog */}
-  <Dialog open={showAddEngine} onOpenChange={(o) => { if (!o) { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>添加搜索引擎</DialogTitle>
-        <DialogDescription>输入搜索引擎名称和搜索URL（用 {'{query}'} 表示关键词位置）</DialogDescription>
-      </DialogHeader>
-      <div className="grid gap-4 py-2">
-        <div className="grid gap-2">
-          <Label htmlFor="engineName">名称</Label>
-          <Input id="engineName" value={newEngineName} onChange={(e) => setNewEngineName(e.target.value)} placeholder="例如: 知乎" />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="engineUrl">搜索 URL</Label>
-          <Input id="engineUrl" value={newEngineUrl} onChange={(e) => setNewEngineUrl(e.target.value)} placeholder="例如: https://www.zhihu.com/search?q=" />
-          <p className="text-xs text-muted-foreground">输入搜索URL，{'{query}'} 会自动替换为关键词</p>
-        </div>
-      </div>
-      <DialogFooter>
-        <Button variant="outline" onClick={() => { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") }}>取消</Button>
-        <Button onClick={() => { if (newEngineName.trim() && newEngineUrl.trim()) { const id = "custom_" + Date.now(); setCustomEngines((prev) => [...prev, { id, name: newEngineName.trim(), url: newEngineUrl.trim() }]); setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }} disabled={!newEngineName.trim() || !newEngineUrl.trim()}>添加</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
@@ -743,7 +551,8 @@ function renderTreeSidebar() {
   </Dialog>
 
 
-    {/* Add Search Engine Dialog */}
+  
+  {/* Add Search Engine Dialog */}
   <Dialog open={showAddEngine} onOpenChange={(o) => { if (!o) { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }}>
     <DialogContent>
       <DialogHeader>
@@ -758,7 +567,7 @@ function renderTreeSidebar() {
         <div className="grid gap-2">
           <Label htmlFor="engineUrl">搜索 URL</Label>
           <Input id="engineUrl" value={newEngineUrl} onChange={(e) => setNewEngineUrl(e.target.value)} placeholder="例如: https://www.zhihu.com/search?q=" />
-          <p className="text-xs text-muted-foreground">输入搜索URL，{'{query}'} 会自动替换为关键词</p>
+          <p className="text-xs text-muted-foreground">{'{query}'} 会自动替换为关键词</p>
         </div>
       </div>
       <DialogFooter>
@@ -767,7 +576,7 @@ function renderTreeSidebar() {
       </DialogFooter>
     </DialogContent>
   </Dialog>
-  {/* Delete Confirmation AlertDialog */}
+{/* Delete Confirmation AlertDialog */}
   <AlertDialog open={!!deleteConfirm} onOpenChange={(o) => { if (!o) setDeleteConfirm(null) }}>
     <AlertDialogContent>
       <AlertDialogHeader>
