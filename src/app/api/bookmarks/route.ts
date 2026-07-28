@@ -86,25 +86,45 @@ export async function PATCH(req: Request) {
   if (!session?.user?.id) return NextResponse.json({ error: "未登录" }, { status: 401 })
 
   try {
-    const { id, folderId } = await req.json()
+    const { id, title, url, folderId } = await req.json()
     if (!id) return NextResponse.json({ error: "缺少书签 ID" }, { status: 400 })
 
-    // 验证目标 folderId 归属
-    if (folderId) {
-      const folder = await prisma.folder.findFirst({
-        where: { id: folderId, userId: session.user.id },
-      })
-      if (!folder) {
-        return NextResponse.json({ error: "文件夹不存在" }, { status: 403 })
+    // 构建更新数据
+    const data: Record<string, unknown> = {}
+
+    if (folderId !== undefined) {
+      // 验证目标 folderId 归属
+      if (folderId) {
+        const folder = await prisma.folder.findFirst({
+          where: { id: folderId, userId: session.user.id },
+        })
+        if (!folder) {
+          return NextResponse.json({ error: "文件夹不存在" }, { status: 403 })
+        }
       }
+      data.folderId = folderId || null
     }
 
-    const bookmark = await prisma.bookmark.updateMany({
+    if (url !== undefined) {
+      if (!validateUrl(url)) {
+        return NextResponse.json({ error: "仅支持 http/https 链接" }, { status: 400 })
+      }
+      if (url.length > 2048) {
+        return NextResponse.json({ error: "URL 过长" }, { status: 400 })
+      }
+      data.url = url
+    }
+
+    if (title !== undefined) {
+      data.title = String(title).slice(0, 500)
+    }
+
+    const result = await prisma.bookmark.updateMany({
       where: { id, userId: session.user.id },
-      data: { folderId: folderId || null },
+      data,
     })
 
-    if (bookmark.count === 0) {
+    if (result.count === 0) {
       return NextResponse.json({ error: "书签不存在或无权限" }, { status: 404 })
     }
 

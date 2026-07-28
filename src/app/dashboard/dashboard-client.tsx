@@ -99,13 +99,13 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const toggleExpand = (id: string) => setExpandedFolders((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
   const moveBookmark = useCallback(async (id: string, folderId: string | null) => {
     setBookmarks((prev) => prev.map((b) => b.id === id ? { ...b, folderId } : b))
-    try { await fetch("/api/bookmarks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, folderId }) }) }
+    try { const res = await fetch("/api/bookmarks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, folderId }) }); if (!res.ok) { const r = await fetch("/api/bookmarks"); if (r.ok) setBookmarks(await r.json()) } }
     catch { const r = await fetch("/api/bookmarks"); if (r.ok) setBookmarks(await r.json()) }
   }, [])
 
   const moveMultipleBookmarks = useCallback(async (ids: string[], folderId: string | null) => {
     setBookmarks((prev) => prev.map((b) => ids.includes(b.id) ? { ...b, folderId } : b))
-    try { await Promise.all(ids.map((id) => fetch("/api/bookmarks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, folderId }) }))) }
+    try { const results = await Promise.all(ids.map((id) => fetch("/api/bookmarks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, folderId }) }))); if (results.some((r) => !r.ok)) { const r = await fetch("/api/bookmarks"); if (r.ok) setBookmarks(await r.json()) } }
     catch { const r = await fetch("/api/bookmarks"); if (r.ok) setBookmarks(await r.json()) }
     setSelectedBmIds(new Set()); setSelectMode(false)
   }, [])
