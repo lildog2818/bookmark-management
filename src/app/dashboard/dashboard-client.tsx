@@ -297,7 +297,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             <span className="text-xs text-muted-foreground">已选 {selectedBmIds.size} 项</span>
             <div className="ml-auto flex gap-2">
               <button onClick={() => setDeleteConfirm({ type: "selected" })} disabled={selectedBmIds.size === 0} className="px-3 py-1.5 text-xs font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50">删除选中</button>
-              setShowMoveDialog(true)
+              <button onClick={() => setShowMoveDialog(true)} disabled={selectedBmIds.size === 0} className="px-3 py-1.5 text-xs font-medium border hover:bg-muted disabled:opacity-50">移动到...</button>
             </div>
           </div>
         )}
@@ -627,6 +627,7 @@ function renderTreeSidebar() {
     </div>
   )
 }
+
 
 
 
