@@ -10,42 +10,44 @@
   --popover-foreground: #171717;
   --primary: #3b82f6;
   --primary-foreground: #ffffff;
-  --secondary: #f3f4f6;
-  --secondary-foreground: #1f2937;
-  --muted: #f3f4f6;
-  --muted-foreground: #6b7280;
-  --accent: #f3f4f6;
-  --accent-foreground: #1f2937;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #1e293b;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #1e293b;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #e5e7eb;
-  --input: #e5e7eb;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
   --ring: #3b82f6;
-  --radius: 0.5rem;
+  --radius: 0.75rem;
+  --sidebar-bg: #f8fafc;
+  --header-bg: rgba(255, 255, 255, 0.8);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0f172a;
-    --foreground: #f8fafc;
-    --card: #1e293b;
-    --card-foreground: #f8fafc;
-    --popover: #1e293b;
-    --popover-foreground: #f8fafc;
-    --primary: #3b82f6;
-    --primary-foreground: #ffffff;
-    --secondary: #1e293b;
-    --secondary-foreground: #f8fafc;
-    --muted: #1e293b;
-    --muted-foreground: #94a3b8;
-    --accent: #1e293b;
-    --accent-foreground: #f8fafc;
-    --destructive: #7f1d1d;
-    --destructive-foreground: #f8fafc;
-    --border: #334155;
-    --input: #334155;
-    --ring: #3b82f6;
-  }
+.dark {
+  --background: #0b1120;
+  --foreground: #e2e8f0;
+  --card: #131c31;
+  --card-foreground: #e2e8f0;
+  --popover: #131c31;
+  --popover-foreground: #e2e8f0;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #1e293b;
+  --secondary-foreground: #e2e8f0;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #1e293b;
+  --accent-foreground: #e2e8f0;
+  --destructive: #7f1d1d;
+  --destructive-foreground: #e2e8f0;
+  --border: #1e293b;
+  --input: #1e293b;
+  --ring: #3b82f6;
+  --sidebar-bg: #0b1120;
+  --header-bg: rgba(11, 17, 32, 0.8);
 }
 
 @theme inline {
@@ -71,10 +73,33 @@
   --radius: var(--radius);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-sidebar-bg: var(--sidebar-bg);
+  --color-header-bg: var(--header-bg);
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-slide-up: slide-up 0.3s ease-out;
+  --animate-scale-in: scale-in 0.2s ease-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--muted-foreground); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--foreground); }
