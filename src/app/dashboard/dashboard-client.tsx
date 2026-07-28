@@ -283,7 +283,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
           <Globe className="h-4 w-4 text-muted-foreground/50 shrink-0" />
           <input type="text" value={webQuery} onChange={(e) => setWebQuery(e.target.value)} onKeyDown={handleWebSearch}
             placeholder="搜索网页..." className="flex-1 bg-transparent px-2 py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground/70" />
-          <Select value={webEngine} onValueChange={(v) => setWebEngine(v || 'bing')}><SelectTrigger size="sm" className="bg-muted/50 border-0 text-xs text-foreground h-7 min-w-0 gap-0.5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="google">Google</SelectItem><SelectItem value="bing">Bing</SelectItem><SelectItem value="duckduckgo">DuckDuckGo</SelectItem><SelectItem value="baidu">百度</SelectItem>{customEngines.map((e) => (<SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>))}</SelectContent></Select><button onClick={() => setShowAddEngine(true)} className="text-muted-foreground/40 hover:text-foreground p-1 shrink-0" title="添加搜索懄皅"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg></button>
+          <Select value={webEngine} onValueChange={(v) => setWebEngine(v || 'bing')}><SelectTrigger size="sm" className="bg-muted/50 border-0 text-xs text-foreground h-7 min-w-[52px] gap-0.5 shrink-0"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="google">Google</SelectItem><SelectItem value="bing">Bing</SelectItem><SelectItem value="duckduckgo">DuckDuckGo</SelectItem><SelectItem value="baidu">百度</SelectItem>{customEngines.map((e) => (<SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>))}</SelectContent></Select><button onClick={() => setShowAddEngine(true)} className="text-muted-foreground/40 hover:text-foreground p-1 shrink-0" title="添加搜索懄皅"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg></button>
         </div>
         {selectMode && (
           <div className="mb-4 flex items-center gap-3 px-4 py-2.5 bg-muted/50" style={{ border: "1px solid var(--border)", breakInside: "avoid-column", marginBottom: "1.25rem" }}>
@@ -394,10 +394,10 @@ function renderTreeSidebar() {
     <div className="flex h-screen flex-col overflow-hidden">
       <header className="flex items-center gap-2 px-4 py-2.5" style={{ borderBottom: "1px solid var(--border)", background: "var(--header-bg)" }}>
         <h1 className="mr-2 hidden text-sm font-bold tracking-tight sm:block"><span className="text-primary">Bookmark</span></h1>
-        <div className="relative flex-1 sm:max-w-sm"><Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
-          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索书签..." className="w-full bg-muted/50 px-3 py-1.5 pl-9 text-sm outline-none focus:bg-muted transition-colors placeholder:text-muted-foreground/70" /></div>
+        <div className="relative flex-1 min-w-0 sm:max-w-sm"><Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
+          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索书签..." className="w-full bg-muted/50 px-2 py-1.5 pl-8 sm:px-3 sm:pl-9 text-sm outline-none focus:bg-muted transition-colors placeholder:text-muted-foreground/70" /></div>
         <span className="hidden whitespace-nowrap text-xs text-muted-foreground/60 sm:inline">{filteredBookmarks.length}/{bookmarks.length}</span>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 sm:gap-1">
           <button onClick={() => setViewMode(viewMode === "card" ? "tree" : "card")} className="p-1.5 text-muted-foreground/60 hover:text-foreground" title={viewMode === "card" ? "文件夹" : "卡片"}>
             {viewMode === "card" ? <PanelLeftClose className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}</button>
           <button onClick={() => { setSelectMode(!selectMode); if (selectMode) setSelectedBmIds(new Set()) }}
@@ -406,13 +406,13 @@ function renderTreeSidebar() {
           <button onClick={() => setShowCreateBookmark(true)} className="flex items-center gap-1 bg-primary px-2 py-1.5 sm:px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90"><Plus className="h-3.5 w-3.5" /> <span className="hidden sm:inline">书签</span></button>
           <button onClick={() => setShowCreateFolder(true)} className="flex items-center gap-1 px-2 py-1.5 sm:px-3 text-xs font-medium text-muted-foreground hover:bg-muted"><FolderPlus className="h-3.5 w-3.5" /> <span className="hidden sm:inline">文件夹</span></button>
           <input ref={fileInputRef} type="file" accept=".html,.htm" onChange={handleImport} className="hidden" />
-          <button onClick={() => fileInputRef.current?.click()} disabled={importing} className="px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50"><Upload className="h-3.5 w-3.5" /></button>
-          <div className="relative group"><button className="px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted"><Download className="h-3.5 w-3.5" /></button>
+          <button onClick={() => fileInputRef.current?.click()} disabled={importing} className="hidden sm:inline-flex px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50 items-center justify-center"><Upload className="h-3.5 w-3.5" /></button>
+          <div className="relative group hidden sm:block"><button className="px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted"><Download className="h-3.5 w-3.5" /></button>
             <div className="absolute right-0 top-full z-50 mt-1 hidden w-28 bg-card py-1 shadow group-hover:block" style={{ border: "1px solid var(--border)", breakInside: "avoid-column", marginBottom: "1.25rem" }}>
               <a href="/api/bookmarks/export?format=html" className="block px-3 py-1.5 text-xs hover:bg-muted">导出 HTML</a>
               <a href="/api/bookmarks/export?format=json" className="block px-3 py-1.5 text-xs hover:bg-muted">导出 JSON</a></div></div>
-          <Tooltip><TooltipTrigger onClick={handleDetectDuplicates} disabled={dedupLoading} className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50 transition-colors">{dedupLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Scan className="h-3.5 w-3.5" />}<span className="hidden sm:inline">去重</span></TooltipTrigger><TooltipContent>检测并清理重复书签</TooltipContent></Tooltip>
-          <div className="mx-1 h-4 w-px bg-border/50" />
+          <Tooltip><TooltipTrigger onClick={handleDetectDuplicates} disabled={dedupLoading} className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50 transition-colors">{dedupLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Scan className="h-3.5 w-3.5" />}<span className="hidden sm:inline">去重</span></TooltipTrigger><TooltipContent>检测并清理重复书签</TooltipContent></Tooltip>
+          <div className="mx-1 h-4 w-px bg-border/50 hidden sm:block" />
           <button onClick={toggleTheme} className="p-1.5 text-muted-foreground/60 hover:text-foreground">{theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>
           <button onClick={() => signOut({ callbackUrl: "/" })} className="p-1.5 text-muted-foreground/60 hover:text-foreground"><LogOut className="h-4 w-4" /></button>
         </div>
