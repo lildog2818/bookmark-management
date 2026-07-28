@@ -149,7 +149,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     const id = editingFolder.id
     try {
       await fetch("/api/folders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name: folderFormName.trim(), priority: folderPriority }) })
-      setFolders((prev) => prev.map((x) => x.id === id ? { ...x, name: folderFormName.trim() } : x))
+      setFolders((prev) => prev.map((x) => x.id === id ? { ...x, name: folderFormName.trim(), priority: folderPriority } : x))
     } catch {}
     setShowEditFolder(false); setEditingFolder(null); setFolderFormName(""); setFolderPriority(0)
   }, [editingFolder, folderFormName, folderPriority])

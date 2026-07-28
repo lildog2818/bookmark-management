@@ -29,26 +29,26 @@ export function ParticlesBackground() {
       const paths: FlowPath[] = []
       for (let i = 0; i < 8; i++) {
         const pts: { x: number; y: number }[] = []
-        const startY = (h / 9) * (i + 1)
+        const startY = h * 0.05 + (i / 8) * h * 0.7
         const amp = 40 + Math.sin(i * 1.7) * 25
         const freq = 0.004 + (i % 3) * 0.001
         for (let j = 0; j <= 120; j++) {
           const t = j / 120
-          const x = t * w * 1.2 - w * 0.1
+          const x = w * 0.85 - t * w * 0.85 + h * 0.08
           const wave1 = Math.sin(x * freq + i * 1.2) * amp
           const wave2 = Math.sin(x * freq * 0.7 + i * 0.9) * amp * 0.5
-          pts.push({ x, y: startY + wave1 + wave2 })
+          pts.push({ x, y: startY + t * h * 0.35 + wave1 * 0.6 + wave2 * 0.3 })
         }
         paths.push({ points: pts, phase: i * 0.3 })
       }
       for (let i = 0; i < 5; i++) {
         const pts: { x: number; y: number }[] = []
-        const startX = (w / 6) * (i + 1) + (Math.random() - 0.5) * 60
+        const startX = w * 0.75 - (i / 5) * w * 0.5
         for (let j = 0; j <= 80; j++) {
           const t = j / 80
-          const y = t * h * 1.1 - h * 0.05
+          const y = h * 0.05 + t * h * 0.7
           const drift = Math.sin(t * Math.PI * 3 + i) * 30
-          pts.push({ x: startX + drift, y })
+          pts.push({ x: startX - t * w * 0.5 + drift * 0.5, y })
         }
         paths.push({ points: pts, phase: i * 0.5 })
       }
@@ -61,8 +61,8 @@ export function ParticlesBackground() {
         arr.push({
           pathIdx: Math.floor(Math.random() * paths.length),
           t: Math.random(),
-          speed: 0.0006 + Math.random() * 0.0012,
-          size: 0.5 + Math.random() * 1.2,
+          speed: 0.0003 + Math.random() * 0.0006,
+          size: 1.0 + Math.random() * 2.0,
           alpha: 0.2 + Math.random() * 0.6,
         })
       }
@@ -124,7 +124,7 @@ export function ParticlesBackground() {
         p.t += p.speed
         if (p.t >= 1) {
           p.t = 0; p.pathIdx = Math.floor(Math.random() * paths.length)
-          p.speed = 0.0006 + Math.random() * 0.0012
+          p.speed = 0.0003 + Math.random() * 0.0006
           p.size = 0.5 + Math.random() * 1.2
           p.alpha = 0.2 + Math.random() * 0.6
         }
@@ -146,5 +146,5 @@ export function ParticlesBackground() {
     }
   }, [])
 
-  return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-0" />
+  return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none -z-10" />
 }
