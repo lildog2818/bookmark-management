@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from "react"
 import { signOut } from "next-auth/react"
-import { FolderPlus, Plus, Search, LogOut, Bookmark, Folder as FolderIcon, ChevronRight, ChevronDown, Upload } from "lucide-react"
+import { FolderPlus, Plus, Search, LogOut, Bookmark, Folder as FolderIcon, ChevronRight, ChevronDown, Upload, Download } from "lucide-react"
 
 interface Folder {
   id: string
@@ -269,6 +269,29 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             <Upload className="h-4 w-4" />
             {importing ? "导入中..." : "导入"}
           </button>
+          <div className="relative group">
+            <button
+              onClick={() => window.open("/api/bookmarks/export?format=html", "_blank")}
+              className="flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted"
+              title="导出 HTML"
+            >
+              <Download className="h-4 w-4" />
+            </button>
+            <div className="absolute right-0 top-full z-50 mt-1 hidden w-32 rounded-md border bg-card shadow-lg group-hover:block">
+              <a
+                href="/api/bookmarks/export?format=html"
+                className="block rounded-t-md px-3 py-2 text-sm hover:bg-muted"
+              >
+                导出 HTML
+              </a>
+              <a
+                href="/api/bookmarks/export?format=json"
+                className="block rounded-b-md px-3 py-2 text-sm hover:bg-muted"
+              >
+                导出 JSON
+              </a>
+            </div>
+          </div>
         </header>
 
         {importResult && (
