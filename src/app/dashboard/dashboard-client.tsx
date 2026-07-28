@@ -271,7 +271,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             </div>
           </div>
         )}
-        <div className="flex flex-wrap" style={{ gap: "1.25rem" }}>
+        <div className="flex flex-wrap -mx-2.5">
           {allCards.map((card, ci) => {
             const isFolder = card.type === "folder"
             const cardId = isFolder ? card.data.id : "__root__"
@@ -279,7 +279,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             return (
               <div key={isFolder ? card.data.id : "root"}
                         {...dragProps(cardId)}
-                className={`bg-card transition-shadow ${isOver(cardId) ? "ring-2 ring-primary" : ""} ${isFolder ? "cursor-grab active:cursor-grabbing" : ""} w-full sm:w-1/2 lg:w-1/3`}
+                className={`bg-card transition-shadow ${isOver(cardId) ? "ring-2 ring-primary" : ""} ${isFolder ? "cursor-grab active:cursor-grabbing" : ""} w-full sm:w-[calc(50%-20px)] lg:w-[calc(33.333%-20px)] px-2.5 mb-5`}
                 style={{ border: "1px solid var(--border)" }}>
                 {card.type === "root" ? (
                   <><div className="flex items-center gap-2 px-4 pt-3 pb-2 cursor-pointer hover:bg-muted/20" onClick={() => setCollapsedCards((prev) => { const n = new Set(prev); n.has("__root__") ? n.delete("__root__") : n.add("__root__"); return n })} style={{ borderBottom: isCollapsed ? "none" : "1px solid var(--border)" }}>
@@ -384,7 +384,7 @@ function renderTreeSidebar() {
               <a href="/api/bookmarks/export?format=json" className="block px-3 py-1.5 text-xs hover:bg-muted">导出 JSON</a></div></div>
           <Tooltip><TooltipTrigger onClick={handleDetectDuplicates} disabled={dedupLoading} className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50 transition-colors">{dedupLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Scan className="h-3.5 w-3.5" />}<span className="hidden sm:inline">去重</span></TooltipTrigger><TooltipContent>检测并清理重复书签</TooltipContent></Tooltip>
           <div className="mx-1 h-4 w-px bg-border/50" />
-          <button onClick={() => alert("test ok")} className="p-1.5 text-xs text-muted-foreground/60 hover:text-foreground" title="Test">T</button><button onClick={toggleTheme} className="p-1.5 text-muted-foreground/60 hover:text-foreground">{theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>
+          <button onClick={toggleTheme} className="p-1.5 text-muted-foreground/60 hover:text-foreground">{theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>
           <button onClick={() => signOut({ callbackUrl: "/" })} className="p-1.5 text-muted-foreground/60 hover:text-foreground"><LogOut className="h-4 w-4" /></button>
         </div>
       </header>
@@ -542,6 +542,7 @@ function renderTreeSidebar() {
     </div>
   )
 }
+
 
 
 
