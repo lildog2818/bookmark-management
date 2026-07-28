@@ -113,8 +113,9 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
         body: JSON.stringify({ name: name.trim(), parentId: null }),
       })
       if (res.ok) {
-        const folder = await res.json()
-        setFolders((prev) => [...prev, folder])
+        // Refresh all folders to get complete data with server-generated fields
+        const foldersRes = await fetch("/api/folders")
+        if (foldersRes.ok) setFolders(await foldersRes.json())
       }
     } catch {}
   }, [])
@@ -492,7 +493,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
         </div>
       )}
 
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-y-auto">
         {viewMode === "card" ? renderCardView() : renderTreeView()}
       </main>
 
