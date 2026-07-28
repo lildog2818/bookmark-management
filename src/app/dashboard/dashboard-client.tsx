@@ -478,10 +478,10 @@ function renderTreeSidebar() {
         <div className="grid gap-2">
           <Label htmlFor="folderSelect">文件夹</Label>
           <select id="folderSelect" value={bmFormFolderId ?? ""} onChange={(e) => setBmFormFolderId(e.target.value || null)}
-            className="w-full rounded-lg border border-input bg-transparent px-3 py-2.5 text-sm ring-offset-background transition-colors focus:outline-none focus:ring-2 focus:ring-ring">
-            <option value="">未分类</option>
+            className="w-full rounded-lg border border-input bg-muted/50 px-3 py-2.5 text-sm text-foreground ring-offset-background transition-colors focus:outline-none focus:ring-2 focus:ring-ring">
+            <option value="" style={{ color: "#fff", background: "#1e293b" }}>未分类</option>
             {folders.filter((f) => !f.parentId).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0)).map((f) => (
-              <option key={f.id} value={f.id}>{f.name}</option>
+              <option key={f.id} value={f.id} style={{ color: "#fff", background: "#1e293b" }}>{f.name}</option>
             ))}
           </select>
         </div>
@@ -638,6 +638,7 @@ function renderTreeSidebar() {
     </div>
   )
 }
+
 
 
 
