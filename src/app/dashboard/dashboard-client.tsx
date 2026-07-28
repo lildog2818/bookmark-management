@@ -266,6 +266,19 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     ]
     return (
       <div className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
+        {/* Web Search */}
+        <div className="mb-4 flex items-center gap-3 p-3 bg-muted/30 rounded-lg" style={{ border: "1px solid var(--border)" }}>
+          <Globe className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+          <input type="text" value={webQuery} onChange={(e) => setWebQuery(e.target.value)} onKeyDown={handleWebSearch}
+            placeholder="搜索网页..." className="flex-1 bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground/50" />
+          <select value={webEngine} onChange={(e) => setWebEngine(e.target.value)}
+            className="bg-transparent text-xs text-muted-foreground/60 outline-none cursor-pointer py-1 px-2 rounded hover:bg-muted/50">
+            <option value="google">Google</option>
+            <option value="bing">Bing</option>
+            <option value="duckduckgo">DuckDuckGo</option>
+            <option value="baidu">百度</option>
+          </select>
+        </div>
         {selectMode && (
           <div className="mb-4 flex items-center gap-3 px-4 py-2.5 bg-muted/50" style={{ border: "1px solid var(--border)", breakInside: "avoid-column", marginBottom: "1.25rem" }}>
             <button onClick={() => { setSelectedBmIds(new Set()); setSelectMode(false) }} className="text-xs text-muted-foreground hover:text-foreground">取消</button>
@@ -547,6 +560,7 @@ function renderTreeSidebar() {
     </div>
   )
 }
+
 
 
 
