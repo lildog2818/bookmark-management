@@ -348,16 +348,16 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   return (
       <div className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
         {/* Web Search */}
-        <div className="mb-4 flex items-center gap-2 py-2 px-3 bg-muted/30 rounded-lg" style={{ border: "1px solid var(--border)", maxWidth: "520px" }}>
+        <div className="mb-4 flex items-center gap-2 py-2 px-3 bg-muted/30 rounded-lg mx-auto" style={{ border: "1px solid var(--border)", maxWidth: "520px" }}>
           <Globe className="h-4 w-4 text-muted-foreground/50 shrink-0" />
           <input type="text" value={webQuery} onChange={(e) => setWebQuery(e.target.value)} onKeyDown={handleWebSearch}
             placeholder="搜索网页..." className="flex-1 bg-transparent px-2 py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground/70" />
           <select value={webEngine} onChange={(e) => setWebEngine(e.target.value)}
-            className="bg-transparent text-xs text-foreground outline-none cursor-pointer py-1 px-2 rounded hover:bg-muted/50">
-            <option value="google">Google</option>
-            <option value="bing">Bing</option>
-            <option value="duckduckgo">DuckDuckGo</option>
-            <option value="baidu">百度</option>
+            className="bg-muted/50 text-xs text-foreground outline-none cursor-pointer py-1 px-2 rounded hover:bg-muted/80">
+            <option value="google" style={{ color: "#fff", background: "#1e293b" }}>Google</option>
+            <option value="bing" style={{ color: "#fff", background: "#1e293b" }}>Bing</option>
+            <option value="duckduckgo" style={{ color: "#fff", background: "#1e293b" }}>DuckDuckGo</option>
+            <option value="baidu" style={{ color: "#fff", background: "#1e293b" }}>百度</option>
             {customEngines.map((e) => (<option key={e.id} value={e.id}>{e.name}</option>))}
           </select>
           <button onClick={() => setShowAddEngine(true)} className="text-muted-foreground/40 hover:text-foreground p-1" title="添加搜索引擎"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg></button>
@@ -793,6 +793,7 @@ function renderTreeSidebar() {
     </div>
   )
 }
+
 
 
 
