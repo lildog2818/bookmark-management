@@ -31,6 +31,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 
 interface Folder { id: string; name: string; color: string | null; icon: string | null; parentId: string | null; priority: number }
 interface Bookmark { id: string; title: string; url: string; description: string | null; favicon: string | null; order: number; folderId: string | null }
@@ -282,15 +283,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
           <Globe className="h-4 w-4 text-muted-foreground/50 shrink-0" />
           <input type="text" value={webQuery} onChange={(e) => setWebQuery(e.target.value)} onKeyDown={handleWebSearch}
             placeholder="搜索网页..." className="flex-1 bg-transparent px-2 py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground/70" />
-          <select value={webEngine} onChange={(e) => setWebEngine(e.target.value)}
-            className="bg-muted/50 text-xs text-foreground outline-none cursor-pointer py-1 px-2 rounded hover:bg-muted/80">
-            <option value="google" style={{ color: "#fff", background: "#1e293b" }}>Google</option>
-            <option value="bing" style={{ color: "#fff", background: "#1e293b" }}>Bing</option>
-            <option value="duckduckgo" style={{ color: "#fff", background: "#1e293b" }}>DuckDuckGo</option>
-            <option value="baidu" style={{ color: "#fff", background: "#1e293b" }}>百度</option>
-            {customEngines.map((e) => (<option key={e.id} value={e.id}>{e.name}</option>))}
-          </select>
-          <button onClick={() => setShowAddEngine(true)} className="text-muted-foreground/40 hover:text-foreground p-1" title="添加搜索引擎"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg></button>
+          <Select value={webEngine} onValueChange={(v) => setWebEngine(v || 'bing')}><SelectTrigger size="sm" className="bg-muted/50 border-0 text-xs text-foreground h-7 min-w-0 gap-0.5"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="google">Google</SelectItem><SelectItem value="bing">Bing</SelectItem><SelectItem value="duckduckgo">DuckDuckGo</SelectItem><SelectItem value="baidu">百度</SelectItem>{customEngines.map((e) => (<SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>))}</SelectContent></Select><button onClick={() => setShowAddEngine(true)} className="text-muted-foreground/40 hover:text-foreground p-1 shrink-0" title="添加搜索懄皅"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg></button>
         </div>
         {selectMode && (
           <div className="mb-4 flex items-center gap-3 px-4 py-2.5 bg-muted/50" style={{ border: "1px solid var(--border)", breakInside: "avoid-column", marginBottom: "1.25rem" }}>
@@ -477,13 +470,7 @@ function renderTreeSidebar() {
         </div>
         <div className="grid gap-2">
           <Label htmlFor="folderSelect">文件夹</Label>
-          <select id="folderSelect" value={bmFormFolderId ?? ""} onChange={(e) => setBmFormFolderId(e.target.value || null)}
-            className="w-full rounded-lg border border-input bg-muted/50 px-3 py-2.5 text-sm text-foreground ring-offset-background transition-colors focus:outline-none focus:ring-2 focus:ring-ring">
-            <option value="" style={{ color: "#fff", background: "#1e293b" }}>未分类</option>
-            {folders.filter((f) => !f.parentId).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0)).map((f) => (
-              <option key={f.id} value={f.id} style={{ color: "#fff", background: "#1e293b" }}>{f.name}</option>
-            ))}
-          </select>
+          <Select value={bmFormFolderId ?? ""} onValueChange={(v) => setBmFormFolderId(v || null)}><SelectTrigger className="w-full bg-muted/50 text-foreground"><SelectValue placeholder="未分类" /></SelectTrigger><SelectContent><SelectItem value="">未分类</SelectItem>{folders.filter((f) => !f.parentId).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0)).map((f) => (<SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>))}</SelectContent></Select>
         </div>
       </div>
       <DialogFooter>
@@ -638,6 +625,7 @@ function renderTreeSidebar() {
     </div>
   )
 }
+
 
 
 
