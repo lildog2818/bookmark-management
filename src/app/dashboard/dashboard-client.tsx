@@ -8,7 +8,7 @@ import {
   Folder as FolderIcon, ChevronRight, ChevronDown,
   Upload, Download, Trash2, X, Sun, Moon,
   FolderPlus, LayoutGrid, PanelLeftClose, CheckSquare, Scan, Loader2, Globe,
-  BarChart3, Link2Off,
+  BarChart3, Link2Off, Menu, MoreHorizontal,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -76,6 +76,11 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const [showDeadLinks, setShowDeadLinks] = useState(false)
   const [deadLinks, setDeadLinks] = useState<any[]>([])
   const [deadLinksLoading, setDeadLinksLoading] = useState(false)
+
+  // Mobile states
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false)
+  const [showMobileExport, setShowMobileExport] = useState(false)
 
   // Dialog states
   const [showCreateBookmark, setShowCreateBookmark] = useState(false)
@@ -269,8 +274,8 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
         <div {...(!selectMode ? { draggable: true, onDragStart: () => { draggedBmRef.current = bm.id; (window as any).__dragSrcFolder = bm.folderId }, onDragOver: (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = "move" }, onDrop: (e: React.DragEvent) => { e.stopPropagation(); const srcId = draggedBmRef.current; const srcFolder = (window as any).__dragSrcFolder; if (!srcId || srcId === bm.id || srcFolder !== bm.folderId) return; setBookmarks((prev) => { const fb = prev.filter((x) => x.folderId === bm.folderId); const si = fb.findIndex((x) => x.id === srcId); const di = fb.findIndex((x) => x.id === bm.id); if (si < 0 || di < 0) return prev; const item = prev.find((x) => x.id === srcId)!; fb.splice(si, 1); fb.splice(di, 0, item); handleReorder(bm.folderId, fb.map((x) => x.id)); return prev.map((x) => ({ ...x, order: fb.findIndex((y) => y.id === x.id) })) }); draggedBmRef.current = null; setDragOverFolderId(null) }, onDragEnd: () => { draggedBmRef.current = null; setDragOverFolderId(null) } } : {})} className="flex flex-1 cursor-pointer items-center min-w-0" onClick={() => { if (!selectMode) fetch("/api/bookmarks/touch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: bm.id }) }).then(r => r.json()).then(d => { if (d.success) { setBookmarks((prev) => { const arr = [...prev]; const idx = arr.findIndex((x) => x.id === bm.id); if (idx >= 0) { const [item] = arr.splice(idx, 1); arr.unshift(item); } return arr }) } }).catch(() => {}); window.open(bm.url, "_blank", "noopener,noreferrer") }}>
           <span className="truncate text-sm font-medium">{bm.title || bm.url}</span>
         </div>
-        {!selectMode && (<><button onClick={(e) => { e.stopPropagation(); openEditBookmark(bm) }} className="shrink-0 p-1.5 text-muted-foreground/40 bm-actions sm:opacity-0 sm:group-hover:opacity-100 hover:text-foreground"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button>
-        <button onClick={(e) => handleDeleteBookmark(bm.id, e)} className="shrink-0 p-1.5 text-muted-foreground/40 bm-actions sm:opacity-0 sm:group-hover:opacity-100 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button></>)}
+        {!selectMode && (<><button onClick={(e) => { e.stopPropagation(); openEditBookmark(bm) }} className="shrink-0 p-2 text-muted-foreground/40 bm-actions sm:opacity-0 sm:group-hover:opacity-100 hover:text-foreground"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button>
+        <button onClick={(e) => handleDeleteBookmark(bm.id, e)} className="shrink-0 p-2 text-muted-foreground/40 bm-actions sm:opacity-0 sm:group-hover:opacity-100 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button></>)}
       </div>
     )
   }
@@ -285,7 +290,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
           <div {...dragProps(f.id)} className={`group flex items-center gap-1 px-3 py-1.5 ${isOver(f.id) ? "bg-primary/10" : ""}`}>
             <button onClick={() => toggleCollapse(f.id)} className="p-0.5 text-muted-foreground/60 hover:text-foreground">{isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}</button>
             <FolderIcon className="h-4 w-4 shrink-0" style={{ color: f.color || undefined }} /><span className="text-sm text-muted-foreground">{f.name}</span><span className="text-xs text-muted-foreground/40">{bms.length}</span>
-            <button onClick={(e) => { e.stopPropagation(); openEditFolder(f) }} className="p-1 text-muted-foreground/30 opacity-100 hover:text-foreground" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(f.id, e)} className="ml-auto p-1 text-muted-foreground/30 opacity-100 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
+            <button onClick={(e) => { e.stopPropagation(); openEditFolder(f) }} className="p-2 text-muted-foreground/30 opacity-100 hover:text-foreground" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(f.id, e)} className="ml-auto p-2 text-muted-foreground/30 opacity-100 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
           </div>
           {!isCollapsed && (<div className="ml-4 pl-2" style={{ borderLeft: "1px solid var(--border)" }}>{bms.map(renderBookmarkRow)}{renderSubFoldersInCard(f.id, depth + 1)}</div>)}
         </div>
@@ -354,7 +359,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
                     <FolderIcon className="h-4 w-4 shrink-0" style={{ color: card.data.color || undefined }} />
                     <span className="text-sm font-semibold">{card.data.name}</span>
 
-                    <button onClick={(e) => { e.stopPropagation(); openEditFolder(card.data) }} className="p-1 text-muted-foreground/30 opacity-100 hover:text-foreground" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(card.data.id, e)} className="p-1 text-muted-foreground/30 opacity-100 hover:text-destructive" title="删除"><Trash2 className="h-3.5 w-3.5" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); openEditFolder(card.data) }} className="p-2 text-muted-foreground/30 opacity-100 hover:text-foreground" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(card.data.id, e)} className="p-2 text-muted-foreground/30 opacity-100 hover:text-destructive" title="删除"><Trash2 className="h-3.5 w-3.5" /></button>
                   </div>
                   {!isCollapsed && (<div className="pb-1">{(() => { const bms = filteredBookmarksByFolder.get(card.data.id) || []; const subs = childFoldersMap.get(card.data.id) || []; const hasSub = subs.some((sf) => { const sfb = filteredBookmarksByFolder.get(sf.id) || []; return sfb.length > 0 || (childFoldersMap.get(sf.id) || []).length > 0 }); if (bms.length === 0 && !hasSub) return <p className="px-4 py-6 text-xs text-muted-foreground/40">空文件夹</p>; return <>{bms.map(renderBookmarkRow)}{renderSubFoldersInCard(card.data.id)}</> })()}</div>)}
                   </>)}
@@ -371,29 +376,51 @@ function renderTreeSidebar() {
 
   return (<div key={f.id}><div {...dragProps(f.id)} className={`group flex items-center ${isOver(f.id) ? "bg-primary/10" : ""}`}>
         <div className="flex w-full items-center">
-          <button onClick={() => { setSelectedFolderId(f.id); if (children.length > 0) toggleExpand(f.id) }}
-            className={`flex w-full items-center gap-1 px-2 py-1.5 text-sm hover:bg-muted ${isSelected ? "bg-muted font-medium text-foreground" : "text-muted-foreground"}`}
+          <button onClick={() => { setSelectedFolderId(f.id); if (children.length > 0) toggleExpand(f.id); setShowMobileSidebar(false) }}
+            className={`flex w-full items-center gap-1 px-2 py-2 text-sm hover:bg-muted ${isSelected ? "bg-muted font-medium text-foreground" : "text-muted-foreground"}`}
             style={{ paddingLeft: `${8 + depth * 14}px` }}>
             {children.length > 0 ? (isExpanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />) : <span className="w-3" />}
             <FolderIcon className="h-4 w-4 shrink-0" style={{ color: f.color || undefined }} /><span className="truncate">{f.name}</span>
             
           </button>
-          <button onClick={(e) => { e.stopPropagation(); openEditFolder(f) }} className="p-1 text-muted-foreground/30 opacity-100 hover:text-foreground" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(f.id, e)} className="shrink-0 p-1.5 text-muted-foreground/30 opacity-100 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
+          <button onClick={(e) => { e.stopPropagation(); openEditFolder(f) }} className="p-2 text-muted-foreground/30 opacity-100 hover:text-foreground" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(f.id, e)} className="shrink-0 p-2 text-muted-foreground/30 opacity-100 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
         </div></div>
         {isExpanded && children.length > 0 && <div>{renderTree(children, depth + 1)}</div>}</div>)
     })
 
   return (
-      <aside className="hidden w-56 shrink-0 bg-sidebar-bg lg:flex lg:flex-col" style={{ borderRight: "1px solid var(--border)" }}>
-        <div className="px-3 py-3" style={{ borderBottom: "1px solid var(--border)" }}><h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">文件夹</h2></div>
-        <div className="flex-1 overflow-y-auto p-2">
-          <div {...dragProps("__root__")} className={isOver("__root__") ? "bg-primary/10" : ""}>
-            <button onClick={() => setSelectedFolderId(null)} className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted ${selectedFolderId === null ? "bg-muted font-medium text-foreground" : "text-muted-foreground"}`}>
-              <Bookmark className="h-4 w-4" /> 全部书签</button>
+      <>
+        {/* Desktop sidebar */}
+        <aside className="hidden w-56 shrink-0 bg-sidebar-bg lg:flex lg:flex-col" style={{ borderRight: "1px solid var(--border)" }}>
+          <div className="px-3 py-3" style={{ borderBottom: "1px solid var(--border)" }}><h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">文件夹</h2></div>
+          <div className="flex-1 overflow-y-auto p-2">
+            <div {...dragProps("__root__")} className={isOver("__root__") ? "bg-primary/10" : ""}>
+              <button onClick={() => setSelectedFolderId(null)} className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted ${selectedFolderId === null ? "bg-muted font-medium text-foreground" : "text-muted-foreground"}`}>
+                <Bookmark className="h-4 w-4" /> 全部书签</button>
+            </div>
+            <div className="mt-1">{renderTree(rootFolders)}</div>
           </div>
-          <div className="mt-1">{renderTree(rootFolders)}</div>
-        </div>
-      </aside>
+        </aside>
+        {/* Mobile sidebar drawer */}
+        {showMobileSidebar && (
+          <>
+            <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setShowMobileSidebar(false)} />
+            <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-sidebar-bg lg:hidden flex flex-col shadow-xl" style={{ borderRight: "1px solid var(--border)" }}>
+              <div className="flex items-center justify-between px-3 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">文件夹</h2>
+                <button onClick={() => setShowMobileSidebar(false)} className="p-2 text-muted-foreground/60 hover:text-foreground"><X className="h-5 w-5" /></button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-2">
+                <div {...dragProps("__root__")} className={isOver("__root__") ? "bg-primary/10" : ""}>
+                  <button onClick={() => { setSelectedFolderId(null); setShowMobileSidebar(false) }} className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted ${selectedFolderId === null ? "bg-muted font-medium text-foreground" : "text-muted-foreground"}`}>
+                    <Bookmark className="h-4 w-4" /> 全部书签</button>
+                </div>
+                <div className="mt-1">{renderTree(rootFolders)}</div>
+              </div>
+            </aside>
+          </>
+        )}
+      </>
     )
   }
 
@@ -405,7 +432,16 @@ function renderTreeSidebar() {
         {renderTreeSidebar()}
         <div className="flex-1 overflow-y-auto px-4 py-6 lg:px-8">
           {display.length === 0 ? (<div className="flex h-full items-center justify-center"><div className="text-center"><Bookmark className="mx-auto h-12 w-12 text-muted-foreground/30" /><p className="mt-4 text-sm text-muted-foreground">{searchQuery ? "没有匹配" : "空的"}</p></div></div>
-          ) : (<div className="mx-auto max-w-7xl"><div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          ) : (<div className="mx-auto max-w-7xl">
+            {/* Mobile folder selector */}
+            <div className="mb-3 lg:hidden">
+              <button onClick={() => setShowMobileSidebar(true)} className="flex items-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:bg-muted">
+                <FolderIcon className="h-3.5 w-3.5" />
+                {selectedFolderId ? folders.find(f => f.id === selectedFolderId)?.name || "文件夹" : "全部书签"}
+                <ChevronDown className="h-3 w-3" />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {display.map((bm) => (
               <div key={bm.id} draggable onDragStart={() => { draggedBmRef.current = bm.id }} onDragEnd={() => { draggedBmRef.current = null; setDragOverFolderId(null) }}
                 onClick={() => { if (!selectMode) fetch("/api/bookmarks/touch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: bm.id }) }).then(r => r.json()).then(d => { if (d.success) { setBookmarks((prev) => { const arr = [...prev]; const idx = arr.findIndex((x) => x.id === bm.id); if (idx >= 0) { const [item] = arr.splice(idx, 1); arr.unshift(item); } return arr }) } }).catch(() => {}); window.open(bm.url, "_blank", "noopener,noreferrer") }} className="group relative cursor-pointer bg-card p-4 hover:bg-muted/30 cursor-grab active:cursor-grabbing" style={{ border: "1px solid var(--border)", breakInside: "avoid-column", marginBottom: "1.25rem" }}>
@@ -413,7 +449,7 @@ function renderTreeSidebar() {
                   {bm.favicon ? <img src={bm.favicon} alt="" className="mt-0.5 h-5 w-5" /> : <Bookmark className="mt-0.5 h-5 w-5 shrink-0 text-primary/60" />}
                   <div className="min-w-0 flex-1"><h3 className="truncate text-sm font-medium">{bm.title || bm.url}</h3><p className="mt-0.5 truncate text-xs text-muted-foreground">{bm.url}</p></div>
                 </div>
-                <div className="absolute right-2 top-2 flex gap-1"><button onClick={(e) => { e.stopPropagation(); openEditBookmark(bm) }} className="p-1 text-muted-foreground/30 bm-actions sm:opacity-0 sm:group-hover:opacity-100 hover:text-foreground"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => { e.stopPropagation(); handleDeleteBookmark(bm.id, e) }} className="p-1 text-muted-foreground/30 bm-actions sm:opacity-0 sm:group-hover:opacity-100 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button></div>
+                <div className="absolute right-2 top-2 flex gap-1"><button onClick={(e) => { e.stopPropagation(); openEditBookmark(bm) }} className="p-2 text-muted-foreground/30 bm-actions sm:opacity-0 sm:group-hover:opacity-100 hover:text-foreground"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => { e.stopPropagation(); handleDeleteBookmark(bm.id, e) }} className="p-2 text-muted-foreground/30 bm-actions sm:opacity-0 sm:group-hover:opacity-100 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button></div>
               </div>
             ))}
           </div></div>)}
@@ -433,10 +469,10 @@ function renderTreeSidebar() {
           <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索书签..." className="w-full bg-muted/50 px-2 py-1.5 pl-8 sm:px-3 sm:pl-9 text-sm outline-none focus:bg-muted transition-colors placeholder:text-muted-foreground/70" /></div>
 
         <div className="flex items-center gap-0.5 sm:gap-1">
-          <button onClick={() => setViewMode(viewMode === "card" ? "tree" : "card")} className="p-1.5 text-muted-foreground/60 hover:text-foreground" title={viewMode === "card" ? "文件夹" : "卡片"}>
+          <button onClick={() => setViewMode(viewMode === "card" ? "tree" : "card")} className="p-2 text-muted-foreground/60 hover:text-foreground" title={viewMode === "card" ? "文件夹" : "卡片"}>
             {viewMode === "card" ? <PanelLeftClose className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}</button>
           <button onClick={() => { setSelectMode(!selectMode); if (selectMode) setSelectedBmIds(new Set()) }}
-            className={`p-1.5 transition-colors ${selectMode ? "text-primary" : "text-muted-foreground/60 hover:text-foreground"}`} title="多选模式"><CheckSquare className="h-4 w-4" /></button>
+            className={`p-2 transition-colors ${selectMode ? "text-primary" : "text-muted-foreground/60 hover:text-foreground"}`} title="多选模式"><CheckSquare className="h-4 w-4" /></button>
           <div className="mx-1 h-4 w-px bg-border/50" />
           <button onClick={() => setShowCreateBookmark(true)} className="flex items-center gap-1 bg-primary px-2 py-1.5 sm:px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90"><Plus className="h-3.5 w-3.5" /> <span className="hidden sm:inline">书签</span></button>
           <button onClick={() => setShowCreateFolder(true)} className="flex items-center gap-1 px-2 py-1.5 sm:px-3 text-xs font-medium text-muted-foreground hover:bg-muted"><FolderPlus className="h-3.5 w-3.5" /> <span className="hidden sm:inline">文件夹</span></button>
@@ -450,8 +486,35 @@ function renderTreeSidebar() {
           <Tooltip><TooltipTrigger onClick={handleShowStats} className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors"><BarChart3 className="h-3.5 w-3.5" /><span className="hidden sm:inline">统计</span></TooltipTrigger><TooltipContent>查看书签统计信息</TooltipContent></Tooltip>
           <Tooltip><TooltipTrigger onClick={handleCheckDeadLinks} disabled={deadLinksLoading} className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50 transition-colors">{deadLinksLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2Off className="h-3.5 w-3.5" />}<span className="hidden sm:inline">死链</span></TooltipTrigger><TooltipContent>检测失效的书签链接</TooltipContent></Tooltip>
           <div className="mx-1 h-4 w-px bg-border/50 hidden sm:block" />
-          <button onClick={toggleTheme} className="p-1.5 text-muted-foreground/60 hover:text-foreground">{theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>
-          <button onClick={() => signOut({ callbackUrl: "/" })} className="p-1.5 text-muted-foreground/60 hover:text-foreground"><LogOut className="h-4 w-4" /></button>
+          {/* Mobile menu button */}
+          <div className="relative sm:hidden">
+            <button onClick={() => setShowMobileMenu(!showMobileMenu)} className="p-2 text-muted-foreground/60 hover:text-foreground">
+              <Menu className="h-4 w-4" />
+            </button>
+            {showMobileMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => { setShowMobileMenu(false); setShowMobileExport(false) }} />
+                <div className="absolute right-0 top-full z-50 mt-1 w-44 bg-card py-1 shadow-lg" style={{ border: "1px solid var(--border)" }}>
+                  <button onClick={() => { setShowMobileMenu(false); handleShowStats() }} className="flex w-full items-center gap-2 px-4 py-3 text-sm hover:bg-muted"><BarChart3 className="h-4 w-4" />统计</button>
+                  <button onClick={() => { setShowMobileMenu(false); handleDetectDuplicates() }} disabled={dedupLoading} className="flex w-full items-center gap-2 px-4 py-3 text-sm hover:bg-muted disabled:opacity-50">{dedupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Scan className="h-4 w-4" />}去重</button>
+                  <button onClick={() => { setShowMobileMenu(false); handleCheckDeadLinks() }} disabled={deadLinksLoading} className="flex w-full items-center gap-2 px-4 py-3 text-sm hover:bg-muted disabled:opacity-50">{deadLinksLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2Off className="h-4 w-4" />}死链</button>
+                  <div className="mx-2 my-1 h-px bg-border/50" />
+                  <button onClick={() => { setShowMobileMenu(false); fileInputRef.current?.click() }} disabled={importing} className="flex w-full items-center gap-2 px-4 py-3 text-sm hover:bg-muted disabled:opacity-50"><Upload className="h-4 w-4" />导入</button>
+                  <div>
+                    <button onClick={() => setShowMobileExport(!showMobileExport)} className="flex w-full items-center gap-2 px-4 py-3 text-sm hover:bg-muted"><Download className="h-4 w-4" />导出</button>
+                    {showMobileExport && (
+                      <div className="bg-muted/30">
+                        <a href="/api/bookmarks/export?format=html" className="flex items-center gap-2 pl-10 pr-4 py-2.5 text-sm hover:bg-muted">导出 HTML</a>
+                        <a href="/api/bookmarks/export?format=json" className="flex items-center gap-2 pl-10 pr-4 py-2.5 text-sm hover:bg-muted">导出 JSON</a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          <button onClick={toggleTheme} className="p-2 text-muted-foreground/60 hover:text-foreground">{theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>
+          <button onClick={() => signOut({ callbackUrl: "/" })} className="p-2 text-muted-foreground/60 hover:text-foreground"><LogOut className="h-4 w-4" /></button>
         </div>
       </header>
       {importResult && (<div className="px-6 py-2 text-sm bg-muted/30" style={{ borderBottom: "1px solid var(--border)" }}>{importResult}<button onClick={() => setImportResult(null)} className="ml-2 font-medium text-muted-foreground hover:text-foreground">关闭</button></div>)}
