@@ -289,7 +289,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
         <div key={f.id} style={{ marginLeft: `${depth * 16}px` }}>
           <div {...dragProps(f.id)} className={`group flex items-center gap-1 px-3 py-1.5 ${isOver(f.id) ? "bg-primary/10" : ""}`}>
             <button onClick={() => toggleCollapse(f.id)} className="p-0.5 text-muted-foreground/60 hover:text-foreground">{isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}</button>
-            <FolderIcon className="h-4 w-4 shrink-0" style={{ color: f.color || undefined }} /><span className="text-sm text-muted-foreground">{f.name}</span><span className="text-xs text-muted-foreground/40">{bms.length}</span>
+            <FolderIcon className="h-4 w-4 shrink-0" style={{ color: (f.color && f.color !== "#3b82f6") ? f.color : undefined }} /><span className="text-sm text-muted-foreground">{f.name}</span><span className="text-xs text-muted-foreground/40">{bms.length}</span>
             <button onClick={(e) => { e.stopPropagation(); openEditFolder(f) }} className="p-2 text-muted-foreground/30 opacity-100 hover:text-foreground" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(f.id, e)} className="ml-auto p-2 text-muted-foreground/30 opacity-100 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
           </div>
           {!isCollapsed && (<div className="ml-4 pl-2" style={{ borderLeft: "1px solid var(--border)" }}>{bms.map(renderBookmarkRow)}{renderSubFoldersInCard(f.id, depth + 1)}</div>)}
@@ -356,7 +356,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
                     <button onClick={(e) => { e.stopPropagation(); setCollapsedCards((prev) => { const n = new Set(prev); n.has(card.data.id) ? n.delete(card.data.id) : n.add(card.data.id); return n }) }} className="p-0.5 text-muted-foreground/50 hover:text-foreground">
                       {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </button>
-                    <FolderIcon className="h-4 w-4 shrink-0" style={{ color: card.data.color || undefined }} />
+                    <FolderIcon className="h-4 w-4 shrink-0" style={{ color: (card.data.color && card.data.color !== "#3b82f6") ? card.data.color : undefined }} />
                     <span className="text-sm font-semibold">{card.data.name}</span>
 
                     <button onClick={(e) => { e.stopPropagation(); openEditFolder(card.data) }} className="p-2 text-muted-foreground/30 opacity-100 hover:text-foreground" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(card.data.id, e)} className="p-2 text-muted-foreground/30 opacity-100 hover:text-destructive" title="删除"><Trash2 className="h-3.5 w-3.5" /></button>
@@ -380,7 +380,7 @@ function renderTreeSidebar() {
             className={`flex w-full items-center gap-1 px-2 py-2 text-sm hover:bg-muted ${isSelected ? "bg-muted font-medium text-foreground" : "text-muted-foreground"}`}
             style={{ paddingLeft: `${8 + depth * 14}px` }}>
             {children.length > 0 ? (isExpanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />) : <span className="w-3" />}
-            <FolderIcon className="h-4 w-4 shrink-0" style={{ color: f.color || undefined }} /><span className="truncate">{f.name}</span>
+            <FolderIcon className="h-4 w-4 shrink-0" style={{ color: (f.color && f.color !== "#3b82f6") ? f.color : undefined }} /><span className="truncate">{f.name}</span>
             
           </button>
           <button onClick={(e) => { e.stopPropagation(); openEditFolder(f) }} className="p-2 text-muted-foreground/30 opacity-100 hover:text-foreground" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(f.id, e)} className="shrink-0 p-2 text-muted-foreground/30 opacity-100 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
@@ -691,7 +691,7 @@ function renderTreeSidebar() {
         {folders.filter((f) => !f.parentId).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0)).map((f) => (
           <button key={f.id} onClick={() => { moveMultipleBookmarks(Array.from(selectedBmIds), f.id); setShowMoveDialog(false) }}
             className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-md transition-colors flex items-center gap-2">
-            <FolderIcon className="h-4 w-4 shrink-0" style={{ color: f.color || undefined }} />
+            <FolderIcon className="h-4 w-4 shrink-0" style={{ color: (f.color && f.color !== "#3b82f6") ? f.color : undefined }} />
             <span>{f.name}</span>
           </button>
         ))}
@@ -767,7 +767,7 @@ function renderTreeSidebar() {
                 <div className="space-y-1.5">
                   {statsData.folderStats.map((f: any) => (
                     <div key={f.id} className="flex items-center gap-2 rounded-md border px-3 py-2">
-                      <FolderIcon className="h-4 w-4 shrink-0" style={{ color: f.color || undefined }} />
+                      <FolderIcon className="h-4 w-4 shrink-0" style={{ color: (f.color && f.color !== "#3b82f6") ? f.color : undefined }} />
                       <span className="flex-1 text-sm truncate">{f.name}</span>
                       <span className="text-xs text-muted-foreground">{f.count} 个书签</span>
                     </div>
