@@ -347,7 +347,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
       return (
         <div key={isFolder ? card.data.id : "root"}
           {...dragProps(cardId)}
-          className={`bg-card transition-shadow ${isOver(cardId) ? "ring-2 ring-primary" : ""} ${isFolder ? "cursor-grab active:cursor-grabbing" : ""}`}
+          className={`w-full bg-card transition-shadow ${isOver(cardId) ? "ring-2 ring-primary" : ""} ${isFolder ? "cursor-grab active:cursor-grabbing" : ""}`}
           style={{ border: "1px solid var(--border)" }}>
           {card.type === "root" ? (
             <><div className="flex items-center gap-2 px-4 pt-3 pb-2" style={{ borderBottom: "1px solid var(--border)" }}>
@@ -388,16 +388,16 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
         <div className="flex flex-col gap-4 px-3 py-4 sm:hidden">
           {allCards.map(renderCard)}
         </div>
-        {/* 平板：2列瀑布流，最短列优先自动补齐 */}
-        <div className="hidden sm:flex lg:hidden gap-4 px-4 py-6">
+        {/* 平板：2列瀑布流，grid 保证等宽列 */}
+        <div className="hidden sm:grid lg:hidden grid-cols-2 gap-4 px-4 py-6">
           {distributeIntoColumns(allCards, 2, getCardWeight).map((col, ci) => (
-            <div key={ci} className="flex-1 flex flex-col gap-4">{col.map(renderCard)}</div>
+            <div key={ci} className="flex flex-col gap-4">{col.map(renderCard)}</div>
           ))}
         </div>
-        {/* 桌面：3列瀑布流，最短列优先自动补齐 */}
-        <div className="hidden lg:flex gap-4 px-8 py-6">
+        {/* 桌面：3列瀑布流，grid 保证等宽列 */}
+        <div className="hidden lg:grid grid-cols-3 gap-4 px-8 py-6">
           {distributeIntoColumns(allCards, 3, getCardWeight).map((col, ci) => (
-            <div key={ci} className="flex-1 flex flex-col gap-4">{col.map(renderCard)}</div>
+            <div key={ci} className="flex flex-col gap-4">{col.map(renderCard)}</div>
           ))}
         </div>
       </div>
