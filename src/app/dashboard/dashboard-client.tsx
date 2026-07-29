@@ -476,7 +476,7 @@ function renderTreeSidebar() {
           <div className="mx-1 h-4 w-px bg-border/50" />
           <button onClick={() => setShowCreateBookmark(true)} className="flex items-center gap-1 bg-primary px-2 py-1.5 sm:px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90"><Plus className="h-3.5 w-3.5" /> <span className="hidden sm:inline">书签</span></button>
           <button onClick={() => setShowCreateFolder(true)} className="flex items-center gap-1 px-2 py-1.5 sm:px-3 text-xs font-medium text-muted-foreground hover:bg-muted"><FolderPlus className="h-3.5 w-3.5" /> <span className="hidden sm:inline">文件夹</span></button>
-          <input ref={fileInputRef} type="file" accept=".html,.htm" onChange={handleImport} className="hidden" />
+          <input ref={fileInputRef} type="file" accept=".html,.htm,.plist" onChange={handleImport} className="hidden" />
           <button onClick={() => fileInputRef.current?.click()} disabled={importing} className="hidden sm:inline-flex px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50 items-center justify-center"><Upload className="h-3.5 w-3.5" /></button>
           <div className="relative group hidden sm:block"><button className="px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted"><Download className="h-3.5 w-3.5" /></button>
             <div className="absolute right-0 top-full z-50 mt-1 hidden w-28 bg-card py-1 shadow group-hover:block" style={{ border: "1px solid var(--border)", breakInside: "avoid-column", marginBottom: "1.25rem" }}>
