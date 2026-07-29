@@ -23,38 +23,55 @@ export async function POST() {
     // 只将这些状态码视为死链（明确表示页面不存在或已删除）
     const DEAD_STATUS_CODES = new Set([404, 410, 451])
 
+    async function checkUrl(url: string): Promise<number | null> {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          signal: controller.signal,
+          redirect: 'follow',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+          }
+        })
+        clearTimeout(timeoutId)
+        if (DEAD_STATUS_CODES.has(response.status)) return response.status
+        return null
+      } catch (error: any) {
+        clearTimeout(timeoutId)
+        // DNS 解析失败或连接被拒 → 域名/服务器确实不可达，视为死链
+        const code = error?.cause?.code || error?.code || ''
+        if (code === 'ENOTFOUND' || code === 'ECONNREFUSED' || code === 'ENETUNREACH') {
+          return code
+        }
+        // 超时等不计为死链（可能是网络问题）
+        return null
+      }
+    }
+
     for (let i = 0; i < bookmarksToCheck.length; i += batchSize) {
       const batch = bookmarksToCheck.slice(i, i + batchSize)
 
       const results = await Promise.all(
         batch.map(async (bookmark) => {
-          try {
-            const controller = new AbortController()
-            const timeoutId = setTimeout(() => controller.abort(), timeout)
+          // 先检查完整 URL
+          const status = await checkUrl(bookmark.url)
+          if (status !== null) return { ...bookmark, status }
 
-            // 使用 GET 请求（很多站点不支持 HEAD）+ 真实浏览器 UA
-            const response = await fetch(bookmark.url, {
-              method: 'GET',
-              signal: controller.signal,
-              redirect: 'follow',
-              headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-              }
-            })
-
-            clearTimeout(timeoutId)
-
-            // 只将明确表示"页面不存在"的状态码视为死链
-            if (DEAD_STATUS_CODES.has(response.status)) {
-              return { ...bookmark, status: response.status }
-            }
-            return null
-          } catch (error: any) {
-            // 网络错误和超时不计为死链（可能是代理/网络问题，不代表链接失效）
-            return null
+          // 如果 URL 包含 hash，去掉 hash 后检查 base URL
+          // hash 路由不发送到服务器，需要检查 base URL 是否可达
+          const hashIndex = bookmark.url.indexOf('#')
+          if (hashIndex > 0) {
+            const baseUrl = bookmark.url.slice(0, hashIndex)
+            const baseStatus = await checkUrl(baseUrl)
+            if (baseStatus !== null) return { ...bookmark, status: baseStatus }
           }
+
+          return null
         })
       )
 

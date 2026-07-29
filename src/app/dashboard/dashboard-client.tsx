@@ -781,7 +781,13 @@ function renderTreeSidebar() {
                   <p className="text-xs text-muted-foreground truncate hover:text-primary">{link.url}</p>
                 </a>
                 <span className="shrink-0 text-xs text-destructive">
-                  {`${link.status}`}
+                  {(() => {
+                    const s = link.status
+                    if (s === 'ENOTFOUND') return '域名不存在'
+                    if (s === 'ECONNREFUSED') return '连接被拒'
+                    if (s === 'ENETUNREACH') return '网络不可达'
+                    return `${s}`
+                  })()}
                 </span>
                 <Button variant="ghost" size="sm" onClick={async () => {
                   try {
