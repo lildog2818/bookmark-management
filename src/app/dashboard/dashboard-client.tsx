@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useCallback, useRef } from "react"
 import { signOut } from "next-auth/react"
@@ -8,6 +8,7 @@ import {
   Folder as FolderIcon, ChevronRight, ChevronDown,
   Upload, Download, Trash2, X, Sun, Moon,
   FolderPlus, LayoutGrid, PanelLeftClose, CheckSquare, Scan, Loader2, Globe,
+  BarChart3, Link2Off,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -67,6 +68,14 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const [collapsedCards, setCollapsedCards] = useState<Set<string>>(new Set())
   const [selectMode, setSelectMode] = useState(false)
   const [selectedBmIds, setSelectedBmIds] = useState<Set<string>>(new Set())
+  
+  // Stats and dead links states
+  const [showStats, setShowStats] = useState(false)
+  const [statsData, setStatsData] = useState<any>(null)
+  const [statsLoading, setStatsLoading] = useState(false)
+  const [showDeadLinks, setShowDeadLinks] = useState(false)
+  const [deadLinks, setDeadLinks] = useState<any[]>([])
+  const [deadLinksLoading, setDeadLinksLoading] = useState(false)
 
   // Dialog states
   const [showCreateBookmark, setShowCreateBookmark] = useState(false)
@@ -212,6 +221,32 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     setDuplicates((prev) => prev.map((g) => ({ ...g, bookmarks: g.bookmarks.filter((b: any) => !selectedDedupIds.has(b.id)) })).filter((g: any) => g.bookmarks.length > 1))
     setSelectedDedupIds(new Set())
   }, [selectedDedupIds])
+
+  const handleShowStats = useCallback(async () => {
+    setStatsLoading(true)
+    setShowStats(true)
+    try {
+      const r = await fetch("/api/bookmarks/stats")
+      if (r.ok) {
+        const data = await r.json()
+        setStatsData(data)
+      }
+    } catch { console.error('Stats error') }
+    setStatsLoading(false)
+  }, [])
+
+  const handleCheckDeadLinks = useCallback(async () => {
+    setDeadLinksLoading(true)
+    setShowDeadLinks(true)
+    try {
+      const r = await fetch("/api/bookmarks/check-dead-links", { method: "POST" })
+      if (r.ok) {
+        const data = await r.json()
+        setDeadLinks(data.deadLinks || [])
+      }
+    } catch { console.error('Dead links check error') }
+    setDeadLinksLoading(false)
+  }, [])
 
   const dragProps = (folderId: string) => ({
     onDragOver: (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOverFolderId(folderId) },
@@ -412,6 +447,8 @@ function renderTreeSidebar() {
               <a href="/api/bookmarks/export?format=html" className="block px-3 py-1.5 text-xs hover:bg-muted">导出 HTML</a>
               <a href="/api/bookmarks/export?format=json" className="block px-3 py-1.5 text-xs hover:bg-muted">导出 JSON</a></div></div>
           <Tooltip><TooltipTrigger onClick={handleDetectDuplicates} disabled={dedupLoading} className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50 transition-colors">{dedupLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Scan className="h-3.5 w-3.5" />}<span className="hidden sm:inline">去重</span></TooltipTrigger><TooltipContent>检测并清理重复书签</TooltipContent></Tooltip>
+          <Tooltip><TooltipTrigger onClick={handleShowStats} className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors"><BarChart3 className="h-3.5 w-3.5" /><span className="hidden sm:inline">统计</span></TooltipTrigger><TooltipContent>查看书签统计信息</TooltipContent></Tooltip>
+          <Tooltip><TooltipTrigger onClick={handleCheckDeadLinks} disabled={deadLinksLoading} className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50 transition-colors">{deadLinksLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2Off className="h-3.5 w-3.5" />}<span className="hidden sm:inline">死链</span></TooltipTrigger><TooltipContent>检测失效的书签链接</TooltipContent></Tooltip>
           <div className="mx-1 h-4 w-px bg-border/50 hidden sm:block" />
           <button onClick={toggleTheme} className="p-1.5 text-muted-foreground/60 hover:text-foreground">{theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>
           <button onClick={() => signOut({ callbackUrl: "/" })} className="p-1.5 text-muted-foreground/60 hover:text-foreground"><LogOut className="h-4 w-4" /></button>
@@ -453,7 +490,7 @@ function renderTreeSidebar() {
         </DialogContent>
       </Dialog>
   {/* Create Bookmark Dialog */}
-  <Dialog open={showCreateBookmark} onOpenChange={(o) => { if (!o) { setShowCreateBookmark(false); setBmFormUrl(""); setBmFormTitle(""); setBmFormFolderId(null) } }}>
+  <Dialog open={showCreateBookmark} onOpenChange={(o) => { if (!o) { setShowCreateBookmark(false); setBmFormUrl(""); setBmFormTitle(""); setBmFormFolderId(null) } }} modal={false}>
     <DialogContent>
       <DialogHeader>
         <DialogTitle>添加书签</DialogTitle>
@@ -481,7 +518,7 @@ function renderTreeSidebar() {
   </Dialog>
 
   {/* Create Folder Dialog */}
-  <Dialog open={showCreateFolder} onOpenChange={(o) => { if (!o) { setShowCreateFolder(false); setFolderFormName("") } }}>
+  <Dialog open={showCreateFolder} onOpenChange={(o) => { if (!o) { setShowCreateFolder(false); setFolderFormName("") } }} modal={false}>
     <DialogContent>
       <DialogHeader>
         <DialogTitle>新建文件夹</DialogTitle>
@@ -501,7 +538,7 @@ function renderTreeSidebar() {
   </Dialog>
 
   {/* Edit Bookmark Dialog */}
-  <Dialog open={showEditBookmark} onOpenChange={(o) => { if (!o) { setShowEditBookmark(false); setEditingBookmark(null); setBmFormUrl(""); setBmFormTitle("") } }}>
+  <Dialog open={showEditBookmark} onOpenChange={(o) => { if (!o) { setShowEditBookmark(false); setEditingBookmark(null); setBmFormUrl(""); setBmFormTitle("") } }} modal={false}>
     <DialogContent>
       <DialogHeader>
         <DialogTitle>编辑书签</DialogTitle>
@@ -528,7 +565,7 @@ function renderTreeSidebar() {
   </Dialog>
 
   {/* Edit Folder Dialog */}
-  <Dialog open={showEditFolder} onOpenChange={(o) => { if (!o) { setShowEditFolder(false); setEditingFolder(null); setFolderFormName(""); setFolderPriority(0) } }}>
+  <Dialog open={showEditFolder} onOpenChange={(o) => { if (!o) { setShowEditFolder(false); setEditingFolder(null); setFolderFormName(""); setFolderPriority(0) } }} modal={false}>
     <DialogContent>
       <DialogHeader>
         <DialogTitle>编辑文件夹</DialogTitle>
@@ -555,7 +592,7 @@ function renderTreeSidebar() {
 
   
   {/* Add Search Engine Dialog */}
-  <Dialog open={showAddEngine} onOpenChange={(o) => { if (!o) { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }}>
+  <Dialog open={showAddEngine} onOpenChange={(o) => { if (!o) { setShowAddEngine(false); setNewEngineName(""); setNewEngineUrl("") } }} modal={false}>
     <DialogContent>
       <DialogHeader>
         <DialogTitle>添加搜索引擎</DialogTitle>
@@ -625,6 +662,146 @@ function renderTreeSidebar() {
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>
+
+  {/* Stats Dialog */}
+  <Dialog open={showStats} onOpenChange={(o) => { if (!o) { setShowStats(false); setStatsData(null) } }}>
+    <DialogContent className="max-w-[95vw] sm:max-w-2xl">
+      <DialogHeader>
+        <DialogTitle>书签统计</DialogTitle>
+        <DialogDescription>查看你的书签使用情况</DialogDescription>
+      </DialogHeader>
+      <div className="max-h-[60vh] overflow-y-auto">
+        {statsLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : statsData ? (
+          <div className="space-y-6">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="rounded-lg border p-3 text-center">
+                <div className="text-2xl font-bold text-primary">{statsData.totalBookmarks}</div>
+                <div className="text-xs text-muted-foreground">总书签数</div>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <div className="text-2xl font-bold text-primary">{statsData.totalFolders}</div>
+                <div className="text-xs text-muted-foreground">文件夹数</div>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <div className="text-2xl font-bold text-primary">{statsData.uncategorizedBookmarks}</div>
+                <div className="text-xs text-muted-foreground">未分类</div>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <div className="text-2xl font-bold text-primary">{statsData.recentBookmarks}</div>
+                <div className="text-xs text-muted-foreground">近7天新增</div>
+              </div>
+            </div>
+
+            {/* Folder Stats */}
+            {statsData.folderStats && statsData.folderStats.length > 0 && (
+              <div>
+                <h3 className="mb-2 text-sm font-semibold">文件夹分布</h3>
+                <div className="space-y-1.5">
+                  {statsData.folderStats.map((f: any) => (
+                    <div key={f.id} className="flex items-center gap-2 rounded-md border px-3 py-2">
+                      <FolderIcon className="h-4 w-4 shrink-0" style={{ color: f.color || undefined }} />
+                      <span className="flex-1 text-sm truncate">{f.name}</span>
+                      <span className="text-xs text-muted-foreground">{f.count} 个书签</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Latest Bookmarks */}
+            {statsData.latestBookmarks && statsData.latestBookmarks.length > 0 && (
+              <div>
+                <h3 className="mb-2 text-sm font-semibold">最近添加</h3>
+                <div className="space-y-1">
+                  {statsData.latestBookmarks.map((bm: any) => (
+                    <a key={bm.id} href={bm.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted transition-colors">
+                      {bm.favicon ? <img src={bm.favicon} alt="" className="h-4 w-4 shrink-0" /> : <Bookmark className="h-4 w-4 shrink-0 text-muted-foreground/50" />}
+                      <span className="flex-1 truncate">{bm.title || bm.url}</span>
+                      <span className="text-xs text-muted-foreground">{new Date(bm.createdAt).toLocaleDateString('zh-CN')}</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Most Visited */}
+            {statsData.mostVisitedBookmarks && statsData.mostVisitedBookmarks.length > 0 && (
+              <div>
+                <h3 className="mb-2 text-sm font-semibold">最近访问</h3>
+                <div className="space-y-1">
+                  {statsData.mostVisitedBookmarks.map((bm: any) => (
+                    <a key={bm.id} href={bm.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted transition-colors">
+                      {bm.favicon ? <img src={bm.favicon} alt="" className="h-4 w-4 shrink-0" /> : <Bookmark className="h-4 w-4 shrink-0 text-muted-foreground/50" />}
+                      <span className="flex-1 truncate">{bm.title || bm.url}</span>
+                      <span className="text-xs text-muted-foreground">{new Date(bm.lastUsedAt).toLocaleDateString('zh-CN')}</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="py-12 text-center text-sm text-muted-foreground">加载失败</p>
+        )}
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => { setShowStats(false); setStatsData(null) }}>关闭</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+
+  {/* Dead Links Dialog */}
+  <Dialog open={showDeadLinks} onOpenChange={(o) => { if (!o) { setShowDeadLinks(false); setDeadLinks([]) } }}>
+    <DialogContent className="max-w-[95vw] sm:max-w-2xl">
+      <DialogHeader>
+        <DialogTitle>死链检测</DialogTitle>
+        <DialogDescription>检测无法访问的书签链接</DialogDescription>
+      </DialogHeader>
+      <div className="max-h-[60vh] overflow-y-auto">
+        {deadLinksLoading ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">正在检测链接，请稍候...</p>
+          </div>
+        ) : deadLinks.length === 0 ? (
+          <p className="py-12 text-center text-sm text-muted-foreground">所有链接都正常 🎉</p>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground mb-3">发现 {deadLinks.length} 个失效链接</p>
+            {deadLinks.map((link: any) => (
+              <div key={link.id} className="flex items-center gap-2 rounded-md border p-3">
+                <Link2Off className="h-4 w-4 shrink-0 text-destructive" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{link.title || link.url}</p>
+                  <p className="text-xs text-muted-foreground truncate">{link.url}</p>
+                </div>
+                <span className="shrink-0 text-xs text-destructive">
+                  {link.status === 'timeout' ? '超时' : link.status === 'error' ? '错误' : `${link.status}`}
+                </span>
+                <Button variant="ghost" size="sm" onClick={async () => {
+                  try {
+                    await fetch("/api/bookmarks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: link.id }) })
+                    setDeadLinks((prev) => prev.filter((l) => l.id !== link.id))
+                    setBookmarks((prev) => prev.filter((b) => b.id !== link.id))
+                  } catch { console.error('Delete error') }
+                }}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => { setShowDeadLinks(false); setDeadLinks([]) }}>关闭</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
     </div>
   )
 }
