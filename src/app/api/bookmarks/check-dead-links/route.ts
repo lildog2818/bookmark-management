@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 
+export const maxDuration = 60 // Vercel 允许的最大执行时间（秒）
+
 export async function POST() {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "未登录" }, { status: 401 })
@@ -12,12 +14,14 @@ export async function POST() {
       select: { id: true, url: true, title: true },
     })
 
+    // 限制检查数量，避免超时
+    const bookmarksToCheck = bookmarks.slice(0, 50)
     const deadLinks: Array<{ id: string; url: string; title: string; status: number | string }> = []
-    const batchSize = 5
-    const timeout = 5000
+    const batchSize = 3
+    const timeout = 3000
 
-    for (let i = 0; i < bookmarks.length; i += batchSize) {
-      const batch = bookmarks.slice(i, i + batchSize)
+    for (let i = 0; i < bookmarksToCheck.length; i += batchSize) {
+      const batch = bookmarksToCheck.slice(i, i + batchSize)
       
       const results = await Promise.all(
         batch.map(async (bookmark) => {
@@ -30,7 +34,7 @@ export async function POST() {
               signal: controller.signal,
               redirect: 'follow',
               headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                'User-Agent': 'Bookmark-Manager/1.0'
               }
             })
             
@@ -44,6 +48,7 @@ export async function POST() {
             if (error.name === 'AbortError') {
               return { ...bookmark, status: 'timeout' }
             }
+            // 网络错误也视为死链
             return { ...bookmark, status: 'error' }
           }
         })
@@ -54,6 +59,7 @@ export async function POST() {
 
     return NextResponse.json({
       total: bookmarks.length,
+      checked: bookmarksToCheck.length,
       deadCount: deadLinks.length,
       deadLinks,
     })
