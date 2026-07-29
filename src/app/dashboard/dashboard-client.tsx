@@ -65,7 +65,6 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const [selectedDedupIds, setSelectedDedupIds] = useState<Set<string>>(new Set())
   const [dedupLoading, setDedupLoading] = useState(false)
   const [collapsedSubFolders, setCollapsedSubFolders] = useState<Set<string>>(new Set())
-  const [collapsedCards, setCollapsedCards] = useState<Set<string>>(new Set())
   const [selectMode, setSelectMode] = useState(false)
   const [selectedBmIds, setSelectedBmIds] = useState<Set<string>>(new Set())
   
@@ -306,6 +305,22 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const handleWebSearch = useCallback((e: React.KeyboardEvent) => { if (e.key === 'Enter' && webQuery.trim()) { const allEngines = { ...searchEngines }; for (const ce of customEngines) { allEngines[ce.id as keyof typeof allEngines] = { name: ce.name, url: ce.url } }; const engine = allEngines[webEngine as keyof typeof allEngines]; if (engine) { window.open(engine.url + encodeURIComponent(webQuery.trim()), '_blank', 'noopener,noreferrer'); setWebQuery('') } } }, [webQuery, webEngine, customEngines])
 
   const searchEngines = { google: { name: "Google", url: "https://www.google.com/search?q=" }, bing: { name: "Bing", url: "https://www.bing.com/search?q=" }, duckduckgo: { name: "DuckDuckGo", url: "https://duckduckgo.com/?q=" }, baidu: { name: "百度", url: "https://www.baidu.com/s?wd=" } }
+
+  // 瀑布流：每次将卡片放入当前最短的列，自动补齐不留空白
+  function distributeIntoColumns<T>(items: T[], cols: number, getWeight: (item: T) => number): T[][] {
+    const result: T[][] = Array.from({ length: cols }, () => [])
+    const colWeights: number[] = Array(cols).fill(0)
+    items.forEach((item) => {
+      let minIdx = 0
+      for (let j = 1; j < cols; j++) {
+        if (colWeights[j] < colWeights[minIdx]) minIdx = j
+      }
+      result[minIdx].push(item)
+      colWeights[minIdx] += getWeight(item)
+    })
+    return result
+  }
+
   function renderCardView() {
     if (filteredBookmarks.length === 0) {
 
@@ -316,17 +331,51 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
       ...(rootBookmarks.length > 0 ? [{ type: "root" as const, data: rootBookmarks }] : []),
     ]
 
-  return (
+    // 根据书签+子文件夹数量估算卡片高度权重
+    function getCardWeight(card: typeof allCards[0]): number {
+      if (card.type === "root") return Math.max(card.data.length, 1)
+      const bms = bookmarksByFolder.get(card.data.id) || []
+      const subs = childFoldersMap.get(card.data.id) || []
+      return Math.max(bms.length + subs.length, 1)
+    }
+
+    // 渲染单个卡片（无折叠，高度严格由内容决定）
+    function renderCard(card: typeof allCards[0]) {
+      const isFolder = card.type === "folder"
+      const cardId = isFolder ? card.data.id : "__root__"
+
+      return (
+        <div key={isFolder ? card.data.id : "root"}
+          {...dragProps(cardId)}
+          className={`bg-card transition-shadow ${isOver(cardId) ? "ring-2 ring-primary" : ""} ${isFolder ? "cursor-grab active:cursor-grabbing" : ""}`}
+          style={{ border: "1px solid var(--border)" }}>
+          {card.type === "root" ? (
+            <><div className="flex items-center gap-2 px-4 pt-3 pb-2" style={{ borderBottom: "1px solid var(--border)" }}>
+              <Bookmark className="h-4 w-4 text-muted-foreground/50" /><span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">未分类</span><span className="ml-auto text-xs text-muted-foreground/40">{card.data.length}</span>
+            </div><div className="pb-1">{card.data.map(renderBookmarkRow)}</div></>
+          ) : (
+            <><div className="group flex items-center gap-2 px-4 pt-3 pb-2" style={{ borderBottom: "1px solid var(--border)" }}>
+              <FolderIcon className="h-4 w-4 shrink-0" style={{ color: (card.data.color && card.data.color !== "#3b82f6") ? card.data.color : undefined }} />
+              <span className="text-sm font-semibold">{card.data.name}</span>
+              <button onClick={(e) => { e.stopPropagation(); openEditFolder(card.data) }} className="p-2 text-muted-foreground/30 opacity-100 hover:text-foreground" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(card.data.id, e)} className="p-2 text-muted-foreground/30 opacity-100 hover:text-destructive" title="删除"><Trash2 className="h-3.5 w-3.5" /></button>
+            </div>
+            <div className="pb-1">{(() => { const bms = filteredBookmarksByFolder.get(card.data.id) || []; const subs = childFoldersMap.get(card.data.id) || []; const hasSub = subs.some((sf) => { const sfb = filteredBookmarksByFolder.get(sf.id) || []; return sfb.length > 0 || (childFoldersMap.get(sf.id) || []).length > 0 }); if (bms.length === 0 && !hasSub) return <p className="px-4 py-6 text-xs text-muted-foreground/40">空文件夹</p>; return <>{bms.map(renderBookmarkRow)}{renderSubFoldersInCard(card.data.id)}</> })()}</div>
+            </>)}
+        </div>
+      )
+    }
+
+    return (
       <div className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
         {/* Web Search */}
         <div className="mb-4 flex items-center gap-2 py-2 px-3 bg-muted/30 rounded-lg mx-auto" style={{ border: "1px solid var(--border)", maxWidth: "520px" }}>
           <Globe className="h-4 w-4 text-muted-foreground/50 shrink-0" />
           <input type="text" value={webQuery} onChange={(e) => setWebQuery(e.target.value)} onKeyDown={handleWebSearch}
             placeholder="搜索网页..." className="flex-1 bg-transparent px-2 py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground/70" />
-          <Select value={webEngine} onValueChange={(v) => setWebEngine(v || 'bing')}><SelectTrigger size="sm" className="bg-muted/50 border-0 text-xs text-foreground h-7 min-w-[52px] gap-0.5 shrink-0"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="google">Google</SelectItem><SelectItem value="bing">Bing</SelectItem><SelectItem value="duckduckgo">DuckDuckGo</SelectItem><SelectItem value="baidu">百度</SelectItem>{customEngines.map((e) => (<SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>))}</SelectContent></Select><button onClick={() => setShowAddEngine(true)} className="text-muted-foreground/40 hover:text-foreground p-1 shrink-0" title="添加搜索懄皅"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg></button>
+          <Select value={webEngine} onValueChange={(v) => setWebEngine(v || 'bing')}><SelectTrigger size="sm" className="bg-muted/50 border-0 text-xs text-foreground h-7 min-w-[52px] gap-0.5 shrink-0"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="google">Google</SelectItem><SelectItem value="bing">Bing</SelectItem><SelectItem value="duckduckgo">DuckDuckGo</SelectItem><SelectItem value="baidu">百度</SelectItem>{customEngines.map((e) => (<SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>))}</SelectContent></Select><button onClick={() => setShowAddEngine(true)} className="text-muted-foreground/40 hover:text-foreground p-1 shrink-0" title="添加搜索引擎"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg></button>
         </div>
         {selectMode && (
-          <div className="mb-4 flex items-center gap-3 px-4 py-2.5 bg-muted/50" style={{ border: "1px solid var(--border)", breakInside: "avoid-column", marginBottom: "1.25rem" }}>
+          <div className="mb-4 flex items-center gap-3 px-4 py-2.5 bg-muted/50" style={{ border: "1px solid var(--border)" }}>
             <button onClick={() => { setSelectedBmIds(new Set()); setSelectMode(false) }} className="text-xs text-muted-foreground hover:text-foreground">取消</button>
             <span className="text-xs text-muted-foreground">已选 {selectedBmIds.size} 项</span>
             <div className="ml-auto flex gap-2">
@@ -335,41 +384,26 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             </div>
           </div>
         )}
-        <div className="masonry-cards px-3 py-4 sm:px-4 sm:py-6 lg:px-8">
-          {allCards.map((card, ci) => {
-            const isFolder = card.type === "folder"
-            const cardId = isFolder ? card.data.id : "__root__"
-            const isCollapsed = collapsedCards.has(cardId)
-
-  return (
-              <div key={isFolder ? card.data.id : "root"}
-                        {...dragProps(cardId)}
-                className={`bg-card transition-shadow ${isOver(cardId) ? "ring-2 ring-primary" : ""} ${isFolder ? "cursor-grab active:cursor-grabbing" : ""}`}
-                style={{ border: "1px solid var(--border)", breakInside: "avoid-column", marginBottom: "1.25rem" }}>
-                {card.type === "root" ? (
-                  <><div className="flex items-center gap-2 px-4 pt-3 pb-2 cursor-pointer hover:bg-muted/20" onClick={() => setCollapsedCards((prev) => { const n = new Set(prev); n.has("__root__") ? n.delete("__root__") : n.add("__root__"); return n })} style={{ borderBottom: isCollapsed ? "none" : "1px solid var(--border)" }}>
-                    <button onClick={(e) => { e.stopPropagation(); setCollapsedCards((prev) => { const n = new Set(prev); n.has("__root__") ? n.delete("__root__") : n.add("__root__"); return n }) }} className="p-0.5 text-muted-foreground/50 hover:text-foreground">{isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</button><Bookmark className="h-4 w-4 text-muted-foreground/50" /><span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">未分类</span><span className="ml-auto text-xs text-muted-foreground/40">{card.data.length}</span>
-                  </div>{!isCollapsed && <div className="pb-1">{card.data.map(renderBookmarkRow)}</div>}</>
-                ) : (
-                  <><div className="group flex items-center gap-2 px-4 pt-3 pb-2 cursor-pointer hover:bg-muted/20" onClick={() => setCollapsedCards((prev) => { const n = new Set(prev); n.has(card.data.id) ? n.delete(card.data.id) : n.add(card.data.id); return n })}
-                    style={{ borderBottom: isCollapsed ? "none" : "1px solid var(--border)" }}>
-                    <button onClick={(e) => { e.stopPropagation(); setCollapsedCards((prev) => { const n = new Set(prev); n.has(card.data.id) ? n.delete(card.data.id) : n.add(card.data.id); return n }) }} className="p-0.5 text-muted-foreground/50 hover:text-foreground">
-                      {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </button>
-                    <FolderIcon className="h-4 w-4 shrink-0" style={{ color: (card.data.color && card.data.color !== "#3b82f6") ? card.data.color : undefined }} />
-                    <span className="text-sm font-semibold">{card.data.name}</span>
-
-                    <button onClick={(e) => { e.stopPropagation(); openEditFolder(card.data) }} className="p-2 text-muted-foreground/30 opacity-100 hover:text-foreground" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(card.data.id, e)} className="p-2 text-muted-foreground/30 opacity-100 hover:text-destructive" title="删除"><Trash2 className="h-3.5 w-3.5" /></button>
-                  </div>
-                  {!isCollapsed && (<div className="pb-1">{(() => { const bms = filteredBookmarksByFolder.get(card.data.id) || []; const subs = childFoldersMap.get(card.data.id) || []; const hasSub = subs.some((sf) => { const sfb = filteredBookmarksByFolder.get(sf.id) || []; return sfb.length > 0 || (childFoldersMap.get(sf.id) || []).length > 0 }); if (bms.length === 0 && !hasSub) return <p className="px-4 py-6 text-xs text-muted-foreground/40">空文件夹</p>; return <>{bms.map(renderBookmarkRow)}{renderSubFoldersInCard(card.data.id)}</> })()}</div>)}
-                  </>)}
-              </div>
-            )
-          })}
+        {/* 移动端：单列 */}
+        <div className="flex flex-col gap-4 px-3 py-4 sm:hidden">
+          {allCards.map(renderCard)}
+        </div>
+        {/* 平板：2列瀑布流，最短列优先自动补齐 */}
+        <div className="hidden sm:flex lg:hidden gap-4 px-4 py-6">
+          {distributeIntoColumns(allCards, 2, getCardWeight).map((col, ci) => (
+            <div key={ci} className="flex-1 flex flex-col gap-4">{col.map(renderCard)}</div>
+          ))}
+        </div>
+        {/* 桌面：3列瀑布流，最短列优先自动补齐 */}
+        <div className="hidden lg:flex gap-4 px-8 py-6">
+          {distributeIntoColumns(allCards, 3, getCardWeight).map((col, ci) => (
+            <div key={ci} className="flex-1 flex flex-col gap-4">{col.map(renderCard)}</div>
+          ))}
         </div>
       </div>
     )
   }
+  
 function renderTreeSidebar() {
     const renderTree = (list: Folder[], depth = 0) => list.map((f) => {
       const children = childFoldersMap.get(f.id) || []; const isExpanded = expandedFolders.has(f.id); const isSelected = selectedFolderId === f.id
@@ -444,7 +478,7 @@ function renderTreeSidebar() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {display.map((bm) => (
               <div key={bm.id} draggable onDragStart={() => { draggedBmRef.current = bm.id }} onDragEnd={() => { draggedBmRef.current = null; setDragOverFolderId(null) }}
-                onClick={() => { if (!selectMode) fetch("/api/bookmarks/touch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: bm.id }) }).then(r => r.json()).then(d => { if (d.success) { setBookmarks((prev) => { const arr = [...prev]; const idx = arr.findIndex((x) => x.id === bm.id); if (idx >= 0) { const [item] = arr.splice(idx, 1); arr.unshift(item); } return arr }) } }).catch(() => {}); window.open(bm.url, "_blank", "noopener,noreferrer") }} className="group relative cursor-pointer bg-card p-4 hover:bg-muted/30 cursor-grab active:cursor-grabbing" style={{ border: "1px solid var(--border)", breakInside: "avoid-column", marginBottom: "1.25rem" }}>
+                onClick={() => { if (!selectMode) fetch("/api/bookmarks/touch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: bm.id }) }).then(r => r.json()).then(d => { if (d.success) { setBookmarks((prev) => { const arr = [...prev]; const idx = arr.findIndex((x) => x.id === bm.id); if (idx >= 0) { const [item] = arr.splice(idx, 1); arr.unshift(item); } return arr }) } }).catch(() => {}); window.open(bm.url, "_blank", "noopener,noreferrer") }} className="group relative cursor-pointer bg-card p-4 hover:bg-muted/30 cursor-grab active:cursor-grabbing" style={{ border: "1px solid var(--border)" }}>
                 <div className="flex items-start gap-3">
                   {bm.favicon ? <img src={bm.favicon} alt="" className="mt-0.5 h-5 w-5" /> : <Bookmark className="mt-0.5 h-5 w-5 shrink-0 text-primary/60" />}
                   <div className="min-w-0 flex-1"><h3 className="truncate text-sm font-medium">{bm.title || bm.url}</h3><p className="mt-0.5 truncate text-xs text-muted-foreground">{bm.url}</p></div>
@@ -479,7 +513,7 @@ function renderTreeSidebar() {
           <input ref={fileInputRef} type="file" accept=".html,.htm,.plist" onChange={handleImport} className="hidden" />
           <button onClick={() => fileInputRef.current?.click()} disabled={importing} className="hidden sm:inline-flex px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50 items-center justify-center"><Upload className="h-3.5 w-3.5" /></button>
           <div className="relative group hidden sm:block"><button className="px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted"><Download className="h-3.5 w-3.5" /></button>
-            <div className="absolute right-0 top-full z-50 mt-1 hidden w-28 bg-card py-1 shadow group-hover:block" style={{ border: "1px solid var(--border)", breakInside: "avoid-column", marginBottom: "1.25rem" }}>
+            <div className="absolute right-0 top-full z-50 mt-1 hidden w-28 bg-card py-1 shadow group-hover:block" style={{ border: "1px solid var(--border)" }}>
               <a href="/api/bookmarks/export?format=html" className="block px-3 py-1.5 text-xs hover:bg-muted">导出 HTML</a>
               <a href="/api/bookmarks/export?format=json" className="block px-3 py-1.5 text-xs hover:bg-muted">导出 JSON</a></div></div>
           <Tooltip><TooltipTrigger onClick={handleDetectDuplicates} disabled={dedupLoading} className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-muted-foreground/60 hover:text-foreground hover:bg-muted disabled:opacity-50 transition-colors">{dedupLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Scan className="h-3.5 w-3.5" />}<span className="hidden sm:inline">去重</span></TooltipTrigger><TooltipContent>检测并清理重复书签</TooltipContent></Tooltip>
