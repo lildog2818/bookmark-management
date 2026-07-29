@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/lib/theme";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ParticlesBackground } from "@/components/particles-background";
-import { ThemeInitScript } from "@/components/theme-init-script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -51,7 +50,7 @@ export default function RootLayout({
           "min-h-full antialiased bg-background text-foreground"
         )}
       >
-        <TooltipProvider><ThemeProvider><ThemeInitScript /><ParticlesBackground />{children}</ThemeProvider></TooltipProvider>
+        <TooltipProvider><ThemeProvider><ParticlesBackground />{children}</ThemeProvider></TooltipProvider>
       </body>
     </html>
   );

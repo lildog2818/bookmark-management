@@ -1,4 +1,4 @@
-﻿import { auth } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 
@@ -72,7 +72,7 @@ export async function PATCH(req: Request) {
     const { id, name, priority } = await req.json()
     if (!id) return NextResponse.json({ error: "缺少文件夹 ID" }, { status: 400 })
 
-    const data: any = {}
+    const data: Record<string, unknown> = {}
     if (name !== undefined) data.name = String(name).slice(0, 200)
     if (priority !== undefined) data.priority = Number(priority) || 0
 

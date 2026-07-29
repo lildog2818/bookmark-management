@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useState } from "react"
 
 export interface ThemePreset {
   id: string
@@ -40,11 +40,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<ThemePreset>(themes[0])
   const [mounted, setMounted] = useState(false)
 
-  const applyTheme = (t: ThemePreset) => {
+  const applyTheme = useCallback((t: ThemePreset) => {
     document.documentElement.setAttribute("data-theme", t.id)
     document.documentElement.classList.toggle("dark", t.dark)
     localStorage.setItem("theme-id", t.id)
-  }
+  }, [])
 
   useEffect(() => {
     setMounted(true)
@@ -52,13 +52,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const t = themes.find((x) => x.id === storedId) || themes[0]
     setTheme(t)
     applyTheme(t)
-  }, [])
+  }, [applyTheme])
 
-  const setThemeId = (id: string) => {
+  const setThemeId = useCallback((id: string) => {
     const t = themes.find((x) => x.id === id) || themes[0]
     setTheme(t)
     applyTheme(t)
-  }
+  }, [applyTheme])
 
   if (!mounted) return <>{children}</>
 

@@ -10,18 +10,23 @@ interface Particle {
   phase: number
 }
 
-function hexToRgb(hex: string) {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return { r, g, b }
-}
-
 export function ParticlesBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const particlesRef = useRef<Particle[]>([])
   const animRef = useRef<number>(0)
+  const colorRef = useRef<string>("rgba(24,24,27,")
+  const isDarkRef = useRef(false)
   const { theme } = useTheme()
+
+  // 主题变化时预计算颜色，避免每帧重复计算 hexToRgb
+  useEffect(() => {
+    const hex = theme.colors.primary
+    const r = parseInt(hex.slice(1, 3), 16)
+    const g = parseInt(hex.slice(3, 5), 16)
+    const b = parseInt(hex.slice(5, 7), 16)
+    colorRef.current = `rgba(${r},${g},${b},`
+    isDarkRef.current = theme.dark
+  }, [theme.colors.primary, theme.dark])
 
   useEffect(() => {
     const canvas = canvasRef.current!
@@ -55,13 +60,8 @@ export function ParticlesBackground() {
     const animate = () => {
       frame++; ctx.clearRect(0, 0, w, h)
       const pts = particlesRef.current
-
-      // 根据主题决定粒子颜色
-      const isDark = theme.dark
-      const rgb = hexToRgb(theme.colors.primary)
-      const particleColor = isDark
-        ? `rgba(${rgb.r},${rgb.g},${rgb.b},`
-        : `rgba(${rgb.r},${rgb.g},${rgb.b},`
+      const particleColor = colorRef.current
+      const isDark = isDarkRef.current
 
       // Dynamic flow lines
       for (let li = 0; li < 14; li++) {
@@ -122,7 +122,7 @@ export function ParticlesBackground() {
     }
     animRef.current = requestAnimationFrame(animate)
     return () => { cancelAnimationFrame(animRef.current); window.removeEventListener('resize', resize) }
-  }, [theme])
+  }, [])
 
   return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none -z-10" />
 }

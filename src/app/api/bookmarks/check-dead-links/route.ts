@@ -23,7 +23,7 @@ export async function POST() {
     // 死链状态码：404/410/451 = 页面不存在/已删除；521-530 = Cloudflare 源站错误
     const DEAD_STATUS_CODES = new Set([404, 410, 451, 521, 522, 523, 524, 525, 526, 527, 530])
 
-    async function checkUrl(url: string): Promise<number | null> {
+    async function checkUrl(url: string): Promise<number | string | null> {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), timeout)
 
@@ -41,10 +41,11 @@ export async function POST() {
         clearTimeout(timeoutId)
         if (DEAD_STATUS_CODES.has(response.status)) return response.status
         return null
-      } catch (error: any) {
+      } catch (error: unknown) {
         clearTimeout(timeoutId)
         // DNS 解析失败或连接被拒 → 域名/服务器确实不可达，视为死链
-        const code = error?.cause?.code || error?.code || ''
+        const err = error as { cause?: { code?: string }; code?: string }
+        const code = err?.cause?.code || err?.code || ''
         if (code === 'ENOTFOUND' || code === 'ECONNREFUSED' || code === 'ENETUNREACH') {
           return code
         }
