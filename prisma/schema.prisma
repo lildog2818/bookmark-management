@@ -22,8 +22,8 @@ model User {
 model Folder {
   id       String   @id @default(cuid())
   name     String
-  color    String?  @default("#3b82f6")
-  icon     String?  @default("folder")
+  color    String?
+  icon     String?
   userId   String
   parentId String?
   order   Int      @default(0)
