@@ -43,6 +43,7 @@ model Bookmark {
   title    String
   url      String
   description String?
+  notes    String?
   favicon  String?
   order   Int      @default(0)
   lastUsedAt DateTime?
