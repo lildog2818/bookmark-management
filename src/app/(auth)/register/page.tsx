@@ -1,16 +1,16 @@
-﻿"use client"
+"use client"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { useTheme } from "@/lib/theme"
-import { Sun, Moon } from "lucide-react"
+import { useTheme, themes } from "@/lib/theme"
 
 export default function RegisterPage() {
   const router = useRouter()
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const { theme, toggle } = useTheme()
+  const { theme, setThemeId } = useTheme()
+  const [showPicker, setShowPicker] = useState(false)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -45,12 +45,28 @@ export default function RegisterPage() {
         <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-purple-500/15 blur-3xl" />
       </div>
 
-      <button
-        onClick={toggle}
-        className="fixed right-4 top-4 z-50 rounded-lg border bg-card p-2 shadow-sm transition-colors hover:bg-muted"
-      >
-        {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-      </button>
+      <div className="fixed right-4 top-4 z-50">
+        <button
+          onClick={() => setShowPicker(!showPicker)}
+          className="rounded-lg border bg-card p-2 shadow-sm transition-colors hover:bg-muted"
+        >
+          <div className="h-4 w-4 rounded-full border" style={{ backgroundColor: theme.colors.primary, borderColor: theme.dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }} />
+        </button>
+        {showPicker && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setShowPicker(false)} />
+            <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-lg border bg-card py-1 shadow-lg">
+              {themes.map((t) => (
+                <button key={t.id} onClick={() => { setThemeId(t.id); setShowPicker(false) }}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted ${theme.id === t.id ? 'bg-muted font-medium' : ''}`}>
+                  <div className="h-4 w-4 shrink-0 rounded-full border" style={{ backgroundColor: t.colors.primary, borderColor: t.dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)' }} />
+                  <span>{t.name}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
 
       <div className="animate-scale-in w-full max-w-sm rounded-2xl border bg-card/80 p-8 shadow-xl backdrop-blur-xl">
         <div className="mb-8 text-center">

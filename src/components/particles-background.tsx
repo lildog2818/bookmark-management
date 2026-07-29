@@ -1,6 +1,7 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useRef } from "react"
+import { useTheme } from "@/lib/theme"
 
 interface Particle {
   x: number; y: number
@@ -9,10 +10,18 @@ interface Particle {
   phase: number
 }
 
+function hexToRgb(hex: string) {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return { r, g, b }
+}
+
 export function ParticlesBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const particlesRef = useRef<Particle[]>([])
   const animRef = useRef<number>(0)
+  const { theme } = useTheme()
 
   useEffect(() => {
     const canvas = canvasRef.current!
@@ -42,11 +51,19 @@ export function ParticlesBackground() {
     }
     resize()
     window.addEventListener("resize", resize)
+
     const animate = () => {
       frame++; ctx.clearRect(0, 0, w, h)
       const pts = particlesRef.current
 
-      // Dynamic flow lines drawn fresh each frame
+      // 根据主题决定粒子颜色
+      const isDark = theme.dark
+      const rgb = hexToRgb(theme.colors.primary)
+      const particleColor = isDark
+        ? `rgba(${rgb.r},${rgb.g},${rgb.b},`
+        : `rgba(${rgb.r},${rgb.g},${rgb.b},`
+
+      // Dynamic flow lines
       for (let li = 0; li < 14; li++) {
         const baseY = h * 0.06 + (li / 14) * h * 0.82
         const amp = 20 + Math.sin(li * 0.9) * 12
@@ -60,8 +77,10 @@ export function ParticlesBackground() {
           const y = baseY + t * h * 0.3 + wave * 0.5
           if (first) { ctx.moveTo(x, y); first = false } else ctx.lineTo(x, y)
         }
-        const la = 0.03 + Math.sin(frame * 0.004 + li * 0.8) * 0.025
-        ctx.strokeStyle = "rgba(255,255,255," + Math.max(0.01, la).toFixed(3) + ")"
+        const la = isDark
+          ? 0.03 + Math.sin(frame * 0.004 + li * 0.8) * 0.025
+          : 0.015 + Math.sin(frame * 0.004 + li * 0.8) * 0.012
+        ctx.strokeStyle = `${particleColor}${Math.max(0.01, la).toFixed(3)})`
         ctx.lineWidth = 0.5; ctx.stroke()
       }
 
@@ -82,11 +101,11 @@ export function ParticlesBackground() {
         const flicker = 0.75 + Math.sin(frame * 0.04 + i * 0.5) * 0.25
         const a = Math.min(1, p.alpha * flicker)
         ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
-        ctx.fillStyle = "rgba(255,255,255," + a.toFixed(3) + ")"
+        ctx.fillStyle = `${particleColor}${a.toFixed(3)})`
         ctx.fill()
       }
 
-      // Connections between nearby particles
+      // Connections
       for (let i = 0; i < pts.length; i += 3) {
         for (let j = i + 3; j < pts.length; j += 3) {
           const dx = pts[i].x - pts[j].x
@@ -94,7 +113,7 @@ export function ParticlesBackground() {
           const dist = Math.sqrt(dx * dx + dy * dy)
           if (dist < 70) {
             ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y)
-            ctx.strokeStyle = "rgba(255,255,255," + ((1 - dist / 70) * 0.05).toFixed(3) + ")"
+            ctx.strokeStyle = `${particleColor}${((1 - dist / 70) * 0.05).toFixed(3)})`
             ctx.lineWidth = 0.3; ctx.stroke()
           }
         }
@@ -103,7 +122,7 @@ export function ParticlesBackground() {
     }
     animRef.current = requestAnimationFrame(animate)
     return () => { cancelAnimationFrame(animRef.current); window.removeEventListener('resize', resize) }
-  }, [])
+  }, [theme])
 
   return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none -z-10" />
 }

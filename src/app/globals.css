@@ -5,7 +5,11 @@
 @custom-variant dark (&:is(.dark *));
 @plugin "tailwindcss-animate";
 
-:root {
+/* ========== 默认主题 (light) ========== */
+:root,
+[data-theme="default"] {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -26,8 +30,6 @@
   --radius: 0.625rem;
   --sidebar-bg: #f8fafc;
   --header-bg: rgba(255, 255, 255, 0.8);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -43,7 +45,9 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
-.dark {
+/* ========== 暗夜主题 ========== */
+.dark,
+[data-theme="dark"] {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -78,6 +82,234 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* ========== 海洋主题 ========== */
+[data-theme="ocean"] {
+  --background: #f0f7ff;
+  --foreground: #1e3a5f;
+  --card: #ffffff;
+  --card-foreground: #1e3a5f;
+  --popover: #ffffff;
+  --popover-foreground: #1e3a5f;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #eff6ff;
+  --secondary-foreground: #1e40af;
+  --muted: #dbeafe;
+  --muted-foreground: #3b82f6;
+  --accent: #dbeafe;
+  --accent-foreground: #1e40af;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #bfdbfe;
+  --input: #bfdbfe;
+  --ring: #3b82f6;
+  --sidebar-bg: #eff6ff;
+  --header-bg: rgba(240, 247, 255, 0.85);
+  --chart-1: #3b82f6;
+  --chart-2: #60a5fa;
+  --chart-3: #93c5fd;
+  --chart-4: #2563eb;
+  --chart-5: #1d4ed8;
+  --sidebar: #eff6ff;
+  --sidebar-foreground: #1e3a5f;
+  --sidebar-primary: #2563eb;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #dbeafe;
+  --sidebar-accent-foreground: #1e40af;
+  --sidebar-border: #bfdbfe;
+  --sidebar-ring: #3b82f6;
+}
+
+/* ========== 森林主题 ========== */
+[data-theme="forest"] {
+  --background: #f0fdf4;
+  --foreground: #14532d;
+  --card: #ffffff;
+  --card-foreground: #14532d;
+  --popover: #ffffff;
+  --popover-foreground: #14532d;
+  --primary: #16a34a;
+  --primary-foreground: #ffffff;
+  --secondary: #f0fdf4;
+  --secondary-foreground: #166534;
+  --muted: #dcfce7;
+  --muted-foreground: #22c55e;
+  --accent: #dcfce7;
+  --accent-foreground: #166534;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #bbf7d0;
+  --input: #bbf7d0;
+  --ring: #22c55e;
+  --sidebar-bg: #f0fdf4;
+  --header-bg: rgba(240, 253, 244, 0.85);
+  --chart-1: #22c55e;
+  --chart-2: #4ade80;
+  --chart-3: #86efac;
+  --chart-4: #16a34a;
+  --chart-5: #15803d;
+  --sidebar: #f0fdf4;
+  --sidebar-foreground: #14532d;
+  --sidebar-primary: #16a34a;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #dcfce7;
+  --sidebar-accent-foreground: #166534;
+  --sidebar-border: #bbf7d0;
+  --sidebar-ring: #22c55e;
+}
+
+/* ========== 日落主题 (dark) ========== */
+[data-theme="sunset"] {
+  --background: #1c1017;
+  --foreground: #fce7d4;
+  --card: #2d1a24;
+  --card-foreground: #fce7d4;
+  --popover: #2d1a24;
+  --popover-foreground: #fce7d4;
+  --primary: #f59e0b;
+  --primary-foreground: #1c1017;
+  --secondary: #3d2533;
+  --secondary-foreground: #fce7d4;
+  --muted: #3d2533;
+  --muted-foreground: #d97706;
+  --accent: #3d2533;
+  --accent-foreground: #fce7d4;
+  --destructive: #ef4444;
+  --destructive-foreground: #fce7d4;
+  --border: rgba(245, 158, 11, 0.15);
+  --input: rgba(245, 158, 11, 0.2);
+  --ring: #f59e0b;
+  --sidebar-bg: #1a0e14;
+  --header-bg: rgba(28, 16, 23, 0.85);
+  --chart-1: #f59e0b;
+  --chart-2: #fbbf24;
+  --chart-3: #fcd34d;
+  --chart-4: #d97706;
+  --chart-5: #b45309;
+  --sidebar: #2d1a24;
+  --sidebar-foreground: #fce7d4;
+  --sidebar-primary: #f59e0b;
+  --sidebar-primary-foreground: #1c1017;
+  --sidebar-accent: #3d2533;
+  --sidebar-accent-foreground: #fce7d4;
+  --sidebar-border: rgba(245, 158, 11, 0.15);
+  --sidebar-ring: #f59e0b;
+}
+
+/* ========== 樱花主题 ========== */
+[data-theme="sakura"] {
+  --background: #fdf2f8;
+  --foreground: #831843;
+  --card: #ffffff;
+  --card-foreground: #831843;
+  --popover: #ffffff;
+  --popover-foreground: #831843;
+  --primary: #db2777;
+  --primary-foreground: #ffffff;
+  --secondary: #fdf2f8;
+  --secondary-foreground: #9d174d;
+  --muted: #fce7f3;
+  --muted-foreground: #ec4899;
+  --accent: #fce7f3;
+  --accent-foreground: #9d174d;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #fbcfe8;
+  --input: #fbcfe8;
+  --ring: #ec4899;
+  --sidebar-bg: #fdf2f8;
+  --header-bg: rgba(253, 242, 248, 0.85);
+  --chart-1: #ec4899;
+  --chart-2: #f472b6;
+  --chart-3: #f9a8d4;
+  --chart-4: #db2777;
+  --chart-5: #be185d;
+  --sidebar: #fdf2f8;
+  --sidebar-foreground: #831843;
+  --sidebar-primary: #db2777;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #fce7f3;
+  --sidebar-accent-foreground: #9d174d;
+  --sidebar-border: #fbcfe8;
+  --sidebar-ring: #ec4899;
+}
+
+/* ========== 极简主题 ========== */
+[data-theme="minimal"] {
+  --background: #fafafa;
+  --foreground: #09090b;
+  --card: #ffffff;
+  --card-foreground: #09090b;
+  --popover: #ffffff;
+  --popover-foreground: #09090b;
+  --primary: #09090b;
+  --primary-foreground: #fafafa;
+  --secondary: #f5f5f5;
+  --secondary-foreground: #09090b;
+  --muted: #f5f5f5;
+  --muted-foreground: #737373;
+  --accent: #e5e5e5;
+  --accent-foreground: #09090b;
+  --destructive: #dc2626;
+  --destructive-foreground: #fafafa;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: #a3a3a3;
+  --sidebar-bg: #f5f5f5;
+  --header-bg: rgba(250, 250, 250, 0.9);
+  --chart-1: #a3a3a3;
+  --chart-2: #737373;
+  --chart-3: #525252;
+  --chart-4: #404040;
+  --chart-5: #262626;
+  --sidebar: #f5f5f5;
+  --sidebar-foreground: #09090b;
+  --sidebar-primary: #09090b;
+  --sidebar-primary-foreground: #fafafa;
+  --sidebar-accent: #e5e5e5;
+  --sidebar-accent-foreground: #09090b;
+  --sidebar-border: #e5e5e5;
+  --sidebar-ring: #a3a3a3;
+}
+
+/* ========== 墨绿主题 (dark) ========== */
+[data-theme="slate"] {
+  --background: #0f172a;
+  --foreground: #e2e8f0;
+  --card: #1e293b;
+  --card-foreground: #e2e8f0;
+  --popover: #1e293b;
+  --popover-foreground: #e2e8f0;
+  --primary: #64748b;
+  --primary-foreground: #f8fafc;
+  --secondary: #334155;
+  --secondary-foreground: #e2e8f0;
+  --muted: #334155;
+  --muted-foreground: #94a3b8;
+  --accent: #334155;
+  --accent-foreground: #e2e8f0;
+  --destructive: #ef4444;
+  --destructive-foreground: #f8fafc;
+  --border: rgba(100, 116, 139, 0.2);
+  --input: rgba(100, 116, 139, 0.25);
+  --ring: #64748b;
+  --sidebar-bg: #0b1120;
+  --header-bg: rgba(15, 23, 42, 0.85);
+  --chart-1: #94a3b8;
+  --chart-2: #64748b;
+  --chart-3: #475569;
+  --chart-4: #334155;
+  --chart-5: #1e293b;
+  --sidebar: #1e293b;
+  --sidebar-foreground: #e2e8f0;
+  --sidebar-primary: #64748b;
+  --sidebar-primary-foreground: #f8fafc;
+  --sidebar-accent: #334155;
+  --sidebar-accent-foreground: #e2e8f0;
+  --sidebar-border: rgba(100, 116, 139, 0.2);
+  --sidebar-ring: #64748b;
 }
 
 @theme inline {

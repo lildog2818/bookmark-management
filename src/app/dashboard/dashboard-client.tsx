@@ -2,11 +2,11 @@
 
 import { useState, useCallback, useRef } from "react"
 import { signOut } from "next-auth/react"
-import { useTheme } from "@/lib/theme"
+import { useTheme, themes } from "@/lib/theme"
 import {
   Plus, Search, LogOut, Bookmark,
   Folder as FolderIcon, ChevronRight, ChevronDown,
-  Upload, Download, Trash2, X, Sun, Moon,
+  Upload, Download, Trash2, X,
   FolderPlus, LayoutGrid, PanelLeftClose, CheckSquare, Scan, Loader2, Globe,
   BarChart3, Link2Off, Menu, MoreHorizontal,
 } from "lucide-react"
@@ -40,7 +40,7 @@ interface Props { folders: Folder[]; bookmarks: Bookmark[]; userId: string }
 type ViewMode = "card" | "tree"
 
 export function DashboardClient({ folders: initialFolders, bookmarks: initialBookmarks }: Props) {
-  const { theme, toggle: toggleTheme } = useTheme()
+  const { theme, setThemeId } = useTheme()
   const [folders, setFolders] = useState<Folder[]>(initialFolders)
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(initialBookmarks)
   const [viewMode, setViewMode] = useState<ViewMode>("card")
@@ -80,6 +80,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
   const [showMobileExport, setShowMobileExport] = useState(false)
+  const [showThemePicker, setShowThemePicker] = useState(false)
 
   // Dialog states
   const [showCreateBookmark, setShowCreateBookmark] = useState(false)
@@ -547,7 +548,26 @@ function renderTreeSidebar() {
               </>
             )}
           </div>
-          <button onClick={toggleTheme} className="p-2 text-muted-foreground/60 hover:text-foreground">{theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>
+          <div className="relative">
+            <button onClick={() => setShowThemePicker(!showThemePicker)} className="p-2 text-muted-foreground/60 hover:text-foreground" title="主题">
+              <div className="h-4 w-4 rounded-full border" style={{ backgroundColor: theme.colors.primary, borderColor: theme.dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }} />
+            </button>
+            {showThemePicker && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowThemePicker(false)} />
+                <div className="absolute right-0 top-full z-50 mt-1 w-44 bg-card py-1 shadow-lg" style={{ border: "1px solid var(--border)" }}>
+                  {themes.map((t) => (
+                    <button key={t.id} onClick={() => { setThemeId(t.id); setShowThemePicker(false) }}
+                      className={`flex w-full items-center gap-3 px-4 py-3 text-sm hover:bg-muted ${theme.id === t.id ? 'bg-muted font-medium' : ''}`}>
+                      <div className="h-5 w-5 shrink-0 rounded-full border" style={{ backgroundColor: t.colors.primary, borderColor: t.dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)' }} />
+                      <span>{t.name}</span>
+                      {theme.id === t.id && <span className="ml-auto text-xs text-primary">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           <button onClick={() => signOut({ callbackUrl: "/" })} className="p-2 text-muted-foreground/60 hover:text-foreground"><LogOut className="h-4 w-4" /></button>
         </div>
       </header>
