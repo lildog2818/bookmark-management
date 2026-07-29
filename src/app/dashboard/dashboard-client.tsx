@@ -786,6 +786,14 @@ function renderTreeSidebar() {
                     if (s === 'ENOTFOUND') return '域名不存在'
                     if (s === 'ECONNREFUSED') return '连接被拒'
                     if (s === 'ENETUNREACH') return '网络不可达'
+                    if (s === 521) return '521 源站宕机'
+                    if (s === 522) return '522 连接超时'
+                    if (s === 523) return '523 源站不可达'
+                    if (s === 524) return '524 网关超时'
+                    if (s === 525) return '525 SSL握手失败'
+                    if (s === 526) return '526 SSL证书无效'
+                    if (s === 527) return '527 Railgun错误'
+                    if (s === 530) return '530 源站DNS错误'
                     return `${s}`
                   })()}
                 </span>

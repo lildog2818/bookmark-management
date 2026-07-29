@@ -20,8 +20,8 @@ export async function POST() {
     const batchSize = 3
     const timeout = 5000
 
-    // 只将这些状态码视为死链（明确表示页面不存在或已删除）
-    const DEAD_STATUS_CODES = new Set([404, 410, 451])
+    // 死链状态码：404/410/451 = 页面不存在/已删除；521-530 = Cloudflare 源站错误
+    const DEAD_STATUS_CODES = new Set([404, 410, 451, 521, 522, 523, 524, 525, 526, 527, 530])
 
     async function checkUrl(url: string): Promise<number | null> {
       const controller = new AbortController()
