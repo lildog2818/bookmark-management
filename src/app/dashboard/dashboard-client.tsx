@@ -8,7 +8,7 @@ import {
   Folder as FolderIcon, ChevronRight, ChevronDown,
   Upload, Download, Trash2, X, Sun, Moon,
   FolderPlus, LayoutGrid, PanelLeftClose, CheckSquare, Scan, Loader2, Globe,
-  BarChart3, Link2Off,
+  BarChart3, Link2Off, ExternalLink,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -353,7 +353,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
                     </button>
                     <FolderIcon className="h-4 w-4 shrink-0" style={{ color: card.data.color || undefined }} />
                     <span className="text-sm font-semibold">{card.data.name}</span>
-                    {(filteredBookmarksByFolder.get(card.data.id)?.length || 0) > 0 && <span className="text-xs text-muted-foreground/40">{filteredBookmarksByFolder.get(card.data.id)?.length}</span>}
+
                     <button onClick={(e) => { e.stopPropagation(); openEditFolder(card.data) }} className="p-1 text-muted-foreground/30 opacity-100 hover:text-foreground" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(card.data.id, e)} className="p-1 text-muted-foreground/30 opacity-100 hover:text-destructive" title="删除"><Trash2 className="h-3.5 w-3.5" /></button>
                   </div>
                   {!isCollapsed && (<div className="pb-1">{(() => { const bms = filteredBookmarksByFolder.get(card.data.id) || []; const subs = childFoldersMap.get(card.data.id) || []; const hasSub = subs.some((sf) => { const sfb = filteredBookmarksByFolder.get(sf.id) || []; return sfb.length > 0 || (childFoldersMap.get(sf.id) || []).length > 0 }); if (bms.length === 0 && !hasSub) return <p className="px-4 py-6 text-xs text-muted-foreground/40">空文件夹</p>; return <>{bms.map(renderBookmarkRow)}{renderSubFoldersInCard(card.data.id)}</> })()}</div>)}
@@ -376,7 +376,7 @@ function renderTreeSidebar() {
             style={{ paddingLeft: `${8 + depth * 14}px` }}>
             {children.length > 0 ? (isExpanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />) : <span className="w-3" />}
             <FolderIcon className="h-4 w-4 shrink-0" style={{ color: f.color || undefined }} /><span className="truncate">{f.name}</span>
-            {(bookmarksByFolder.get(f.id)?.length || 0) > 0 && <span className="ml-auto text-xs text-muted-foreground/40">{bookmarksByFolder.get(f.id)?.length}</span>}
+            
           </button>
           <button onClick={(e) => { e.stopPropagation(); openEditFolder(f) }} className="p-1 text-muted-foreground/30 opacity-100 hover:text-foreground" title="编辑"><svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button><button onClick={(e) => handleDeleteFolder(f.id, e)} className="shrink-0 p-1.5 text-muted-foreground/30 opacity-100 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
         </div></div>
@@ -431,7 +431,7 @@ function renderTreeSidebar() {
         <h1 className="mr-2 hidden text-sm font-bold tracking-tight sm:block"><span className="text-primary">Bookmark</span></h1>
         <div className="relative flex-1 min-w-0 sm:max-w-sm"><Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
           <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索书签..." className="w-full bg-muted/50 px-2 py-1.5 pl-8 sm:px-3 sm:pl-9 text-sm outline-none focus:bg-muted transition-colors placeholder:text-muted-foreground/70" /></div>
-        <span className="hidden whitespace-nowrap text-xs text-muted-foreground/60 sm:inline">{filteredBookmarks.length}/{bookmarks.length}</span>
+
         <div className="flex items-center gap-0.5 sm:gap-1">
           <button onClick={() => setViewMode(viewMode === "card" ? "tree" : "card")} className="p-1.5 text-muted-foreground/60 hover:text-foreground" title={viewMode === "card" ? "文件夹" : "卡片"}>
             {viewMode === "card" ? <PanelLeftClose className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}</button>
@@ -781,8 +781,13 @@ function renderTreeSidebar() {
                   <p className="text-xs text-muted-foreground truncate">{link.url}</p>
                 </div>
                 <span className="shrink-0 text-xs text-destructive">
-                  {link.status === 'timeout' ? '超时' : link.status === 'error' ? '错误' : `${link.status}`}
+                  {`${link.status}`}
                 </span>
+                <Button variant="ghost" size="sm" asChild>
+                  <a href={link.url} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </Button>
                 <Button variant="ghost" size="sm" onClick={async () => {
                   try {
                     await fetch("/api/bookmarks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: link.id }) })

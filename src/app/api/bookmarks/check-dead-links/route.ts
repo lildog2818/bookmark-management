@@ -40,16 +40,14 @@ export async function POST() {
             
             clearTimeout(timeoutId)
             
-            if (!response.ok) {
+            // 只将明确的 HTTP 错误状态码（4xx/5xx）视为死链
+            if (!response.ok && response.status >= 400) {
               return { ...bookmark, status: response.status }
             }
             return null
           } catch (error: any) {
-            if (error.name === 'AbortError') {
-              return { ...bookmark, status: 'timeout' }
-            }
-            // 网络错误也视为死链
-            return { ...bookmark, status: 'error' }
+            // 网络错误和超时不计为死链（可能是代理问题）
+            return null
           }
         })
       )
