@@ -783,11 +783,9 @@ function renderTreeSidebar() {
                 <span className="shrink-0 text-xs text-destructive">
                   {`${link.status}`}
                 </span>
-                <Button variant="ghost" size="sm" asChild>
-                  <a href={link.url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                </Button>
+                <a href={link.url} target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
                 <Button variant="ghost" size="sm" onClick={async () => {
                   try {
                     await fetch("/api/bookmarks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: link.id }) })
