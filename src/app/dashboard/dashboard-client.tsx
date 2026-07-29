@@ -8,10 +8,9 @@ import {
   Folder as FolderIcon, ChevronRight, ChevronDown,
   Upload, Download, Trash2, X, Sun, Moon,
   FolderPlus, LayoutGrid, PanelLeftClose, CheckSquare, Scan, Loader2, Globe,
-  BarChart3, Link2Off, ExternalLink,
+  BarChart3, Link2Off,
 } from "lucide-react"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
@@ -777,16 +776,13 @@ function renderTreeSidebar() {
             {deadLinks.map((link: any) => (
               <div key={link.id} className="flex items-center gap-2 rounded-md border p-3">
                 <Link2Off className="h-4 w-4 shrink-0 text-destructive" />
-                <div className="flex-1 min-w-0">
+                <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 hover:text-primary transition-colors">
                   <p className="text-sm font-medium truncate">{link.title || link.url}</p>
-                  <p className="text-xs text-muted-foreground truncate">{link.url}</p>
-                </div>
+                  <p className="text-xs text-muted-foreground truncate hover:text-primary">{link.url}</p>
+                </a>
                 <span className="shrink-0 text-xs text-destructive">
                   {`${link.status}`}
                 </span>
-                <a href={link.url} target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
                 <Button variant="ghost" size="sm" onClick={async () => {
                   try {
                     await fetch("/api/bookmarks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: link.id }) })
