@@ -1,4 +1,4 @@
-﻿import Link from "next/link"
+import Link from "next/link"
 
 export default function Home() {
   return (
@@ -20,7 +20,7 @@ export default function Home() {
               href="/register"
               className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow-md"
             >
-              免费注册
+              注册
             </Link>
           </div>
         </div>
@@ -49,7 +49,7 @@ export default function Home() {
                 href="/register"
                 className="rounded-lg bg-primary px-8 py-3 text-base font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90 hover:shadow-xl hover:-translate-y-0.5"
               >
-                免费开始使用
+                开始使用
               </Link>
               <Link
                 href="/login"
@@ -64,37 +64,51 @@ export default function Home() {
         {/* 特性区域 */}
         <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-16 sm:pb-24">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
-            {[
-              {
-                icon: "📂",
-                title: "分类整理",
-                desc: "无限层级文件夹，拖拽整理，一目了然",
-              },
-              {
-                icon: "🔍",
-                title: "快速搜索",
-                desc: "标题 + URL 全文搜索，秒级找到任何书签",
-              },
-              {
-                icon: "📤",
-                title: "导入导出",
-                desc: "支持主流浏览器书签格式，无缝迁移",
-              },
-              {
-                icon: "🎨",
-                title: "暗色模式",
-                desc: "护眼暗色主题，日夜使用都舒适",
-              },
-              {
-                icon: "🔗",
-                title: "去重管理",
-                desc: "自动检测重复书签，一键清理",
-              },
-              {
-                icon: "☁️",
-                title: "云端同步",
-                desc: "数据保存在云端，随时随地访问",
-              },
+            {[{
+              icon: "📂",
+              title: "分类整理",
+              desc: "无限层级文件夹，拖拽排序，一目了然",
+            },
+            {
+              icon: "🔍",
+              title: "快速搜索",
+              desc: "标题 + URL 全文搜索，秒级找到任何书签",
+            },
+            {
+              icon: "📤",
+              title: "导入导出",
+              desc: "支持 Chrome / Firefox / Edge / Safari 书签格式",
+            },
+            {
+              icon: "🎨",
+              title: "多款主题",
+              desc: "8 种主题预设，自由切换，日夜舒适",
+            },
+            {
+              icon: "🔗",
+              title: "去重管理",
+              desc: "自动检测重复书签，批量清理",
+            },
+            {
+              icon: "💀",
+              title: "死链检测",
+              desc: "检测失效链接，标注错误类型，及时清理",
+            },
+            {
+              icon: "⭐",
+              title: "收藏文件夹",
+              desc: "专属收藏夹，书签复制不移动，排除查重",
+            },
+            {
+              icon: "📊",
+              title: "书签统计",
+              desc: "查看使用数据，掌握书签分布情况",
+            },
+            {
+              icon: "🌐",
+              title: "网页搜索",
+              desc: "内置多搜索引擎，支持自定义引擎",
+            },
             ].map((item, i) => (
               <div
                 key={i}
