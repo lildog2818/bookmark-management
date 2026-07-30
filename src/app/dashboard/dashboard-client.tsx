@@ -94,6 +94,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
 
   const [showDedup, setShowDedup] = useState(false)
   const [showMoveDialog, setShowMoveDialog] = useState(false)
+  const [showFavoriteDialog, setShowFavoriteDialog] = useState(false)
   const [duplicates, setDuplicates] = useState<DuplicateGroup[]>([])
   const [selectedDedupIds, setSelectedDedupIds] = useState<Set<string>>(new Set())
   const [dedupLoading, setDedupLoading] = useState(false)
@@ -143,6 +144,11 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     }
     return m
   }, [folders])
+
+  const favoriteFolders = useMemo(
+    () => folders.filter((f) => f.isFavorite),
+    [folders],
+  )
 
   const bookmarksByFolder = useMemo(() => {
     const m = new Map<string, Bookmark[]>()
@@ -203,6 +209,15 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     } catch { await refetchData() }
     setSelectedBmIds(new Set()); setSelectMode(false)
   }, [refetchData])
+
+  const handleCopyToFavorite = useCallback(async (folderId: string) => {
+    const ids = Array.from(selectedBmIds)
+    try {
+      const res = await fetch("/api/bookmarks/copy", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bookmarkIds: ids, folderId }) })
+      if (res.ok) await refetchData()
+    } catch { /* ignore */ }
+    setShowFavoriteDialog(false); setSelectedBmIds(new Set()); setSelectMode(false)
+  }, [selectedBmIds, refetchData])
 
   const openEditBookmark = (bm: Bookmark) => {
     setBmFormUrl(bm.url); setBmFormTitle(bm.title || ""); setBmFormFolderId(bm.folderId)
@@ -545,16 +560,6 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
           </button>
         </div>
-        {selectMode && (
-          <div className="mb-4 flex items-center gap-3 px-4 py-2.5 bg-muted/50" style={{ border: "1px solid var(--border)" }}>
-            <button onClick={() => { setSelectedBmIds(new Set()); setSelectMode(false) }} className="text-xs text-muted-foreground hover:text-foreground">取消</button>
-            <span className="text-xs text-muted-foreground">已选 {selectedBmIds.size} 项</span>
-            <div className="ml-auto flex gap-2">
-              <button onClick={() => setDeleteConfirm({ type: "selected" })} disabled={selectedBmIds.size === 0} className="px-3 py-1.5 text-xs font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50">删除选中</button>
-              <button onClick={() => setShowMoveDialog(true)} disabled={selectedBmIds.size === 0} className="px-3 py-1.5 text-xs font-medium border hover:bg-muted disabled:opacity-50">移动到...</button>
-            </div>
-          </div>
-        )}
         <div className="flex flex-col gap-4 px-3 py-4 sm:hidden">{allCards.map(renderCard)}</div>
         <div className="hidden sm:grid lg:hidden grid-cols-2 gap-4 px-4 py-6">
           {distributeIntoColumns(allCards, 2, getCardWeight).map((col, ci) => (
@@ -800,6 +805,18 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
         </div>
       )}
 
+      {selectMode && (
+        <div className="sticky top-0 z-30 flex items-center gap-3 px-4 py-2.5 bg-sidebar-bg" style={{ borderBottom: "1px solid var(--border)" }}>
+          <button onClick={() => { setSelectedBmIds(new Set()); setSelectMode(false) }} className="text-xs text-muted-foreground hover:text-foreground">取消</button>
+          <span className="text-xs text-muted-foreground">已选 {selectedBmIds.size} 项</span>
+          <div className="ml-auto flex gap-2">
+            <button onClick={() => setShowFavoriteDialog(true)} disabled={selectedBmIds.size === 0} className="px-3 py-1.5 text-xs font-medium border hover:bg-muted disabled:opacity-50">收藏到...</button>
+            <button onClick={() => setShowMoveDialog(true)} disabled={selectedBmIds.size === 0} className="px-3 py-1.5 text-xs font-medium border hover:bg-muted disabled:opacity-50">移动到...</button>
+            <button onClick={() => setDeleteConfirm({ type: "selected" })} disabled={selectedBmIds.size === 0} className="px-3 py-1.5 text-xs font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50">删除选中</button>
+          </div>
+        </div>
+      )}
+
       <main className="flex-1 overflow-y-auto">{viewMode === "card" ? renderCardView() : renderTreeView()}</main>
 
       {/* ── 对话框 ── */}
@@ -959,6 +976,32 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             ))}
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setShowMoveDialog(false)}>取消</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 收藏到收藏文件夹 */}
+      <Dialog open={showFavoriteDialog} onOpenChange={(o) => { if (!o) setShowFavoriteDialog(false) }}>
+        <DialogContent className="max-w-[95vw] sm:max-w-sm">
+          <DialogHeader><DialogTitle>收藏到...</DialogTitle><DialogDescription>选择收藏文件夹（书签将被复制，原位置保留）</DialogDescription></DialogHeader>
+          <div className="max-h-60 overflow-y-auto -mx-4 px-4">
+            {favoriteFolders.length === 0 && (
+              <p className="px-3 py-4 text-sm text-muted-foreground text-center">暂无收藏文件夹</p>
+            )}
+            {favoriteFolders.map((f) => (
+              <button key={f.id} onClick={() => handleCopyToFavorite(f.id)}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-md transition-colors flex items-center gap-2">
+                <FolderTypeIcon f={f} />
+                <span>{f.name}</span>
+              </button>
+            ))}
+            <div className="mt-2 pt-2" style={{ borderTop: "1px solid var(--border)" }}>
+              <button onClick={() => { setShowFavoriteDialog(false); setFolderFormIsFavorite(true); setShowCreateFolder(true) }}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-md transition-colors flex items-center gap-2 text-primary">
+                <Plus className="h-4 w-4" /> 新建收藏文件夹
+              </button>
+            </div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setShowFavoriteDialog(false)}>取消</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
