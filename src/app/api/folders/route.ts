@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   if (!session?.user?.id) return NextResponse.json({ error: "未登录" }, { status: 401 })
 
   try {
-    const { name, parentId, color } = await req.json()
+    const { name, parentId, color, isFavorite } = await req.json()
 
     // 长度限制
     if (!name || name.length > 200) {
@@ -30,6 +30,7 @@ export async function POST(req: Request) {
         color: color || null,
         parentId: parentId || null,
         userId: session.user.id,
+        isFavorite: !!isFavorite,
       },
     })
     return NextResponse.json(folder, { status: 201 })
@@ -69,12 +70,13 @@ export async function PATCH(req: Request) {
   if (!session?.user?.id) return NextResponse.json({ error: "未登录" }, { status: 401 })
 
   try {
-    const { id, name, priority } = await req.json()
+    const { id, name, priority, isFavorite } = await req.json()
     if (!id) return NextResponse.json({ error: "缺少文件夹 ID" }, { status: 400 })
 
     const data: Record<string, unknown> = {}
     if (name !== undefined) data.name = String(name).slice(0, 200)
     if (priority !== undefined) data.priority = Number(priority) || 0
+    if (isFavorite !== undefined) data.isFavorite = !!isFavorite
 
     await prisma.folder.updateMany({
       where: { id, userId: session.user.id },

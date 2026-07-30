@@ -7,8 +7,17 @@ export async function POST() {
   if (!session?.user?.id) return NextResponse.json({ error: "未登录" }, { status: 401 })
 
   try {
+    // 获取收藏文件夹ID列表，收藏文件夹内的书签不参与查重
+    const favoriteFolderIds = (await prisma.folder.findMany({
+      where: { userId: session.user.id, isFavorite: true },
+      select: { id: true },
+    })).map((f) => f.id)
+
     const bookmarks = await prisma.bookmark.findMany({
-      where: { userId: session.user.id },
+      where: {
+        userId: session.user.id,
+        ...(favoriteFolderIds.length > 0 ? { folderId: { notIn: favoriteFolderIds } } : {}),
+      },
     })
 
     // Group by normalized URL

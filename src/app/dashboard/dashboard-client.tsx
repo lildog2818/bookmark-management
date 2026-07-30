@@ -8,7 +8,7 @@ import {
   Folder as FolderIcon, ChevronRight, ChevronDown,
   Upload, Download, Trash2, X,
   FolderPlus, LayoutGrid, PanelLeftClose, CheckSquare, Scan, Loader2, Globe,
-  BarChart3, Link2Off, Menu,
+  BarChart3, Link2Off, Menu, Star,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,7 +24,7 @@ import {
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 
 // ── 类型定义 ──
-interface Folder { id: string; name: string; color: string | null; icon: string | null; parentId: string | null; priority: number }
+interface Folder { id: string; name: string; color: string | null; icon: string | null; parentId: string | null; priority: number; isFavorite: boolean }
 interface Bookmark { id: string; title: string; url: string; description: string | null; favicon: string | null; order: number; folderId: string | null }
 interface Props { folders: Folder[]; bookmarks: Bookmark[]; userId: string }
 type ViewMode = "card" | "tree"
@@ -34,7 +34,7 @@ interface StatsData {
   totalBookmarks: number; totalFolders: number; uncategorizedBookmarks: number
   recentBookmarks: number; latestBookmarks: { id: string; title: string; url: string; favicon: string | null; createdAt: string }[]
   mostVisitedBookmarks: { id: string; title: string; url: string; favicon: string | null; lastUsedAt: string }[]
-  folderStats: { id: string; name: string; color: string | null; count: number }[]
+  folderStats: { id: string; name: string; color: string | null; isFavorite: boolean; count: number }[]
 }
 interface DeadLink { id: string; url: string; title: string; status: number | string }
 
@@ -68,6 +68,8 @@ const DEAD_LINK_LABELS: Record<string, string> = {
 }
 
 const FOLDER_ICON_COLOR = (c: string | null) => (c && c !== "#3b82f6") ? c : undefined
+const FolderTypeIcon = ({ f, className = "h-4 w-4 shrink-0" }: { f: { isFavorite: boolean; color: string | null }; className?: string }) =>
+  f.isFavorite ? <Star className={className} style={{ color: "rgb(234, 179, 8)" }} /> : <FolderIcon className={className} style={{ color: FOLDER_ICON_COLOR(f.color) }} />
 
 // ── 组件 ──
 export function DashboardClient({ folders: initialFolders, bookmarks: initialBookmarks }: Props) {
@@ -124,6 +126,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const [bmFormFolderId, setBmFormFolderId] = useState<string | null>(null)
   const [folderFormName, setFolderFormName] = useState("")
   const [folderPriority, setFolderPriority] = useState(0)
+  const [folderFormIsFavorite, setFolderFormIsFavorite] = useState(false)
 
   // ── useMemo：派生数据，避免每次渲染重建 ──
   const rootFolders = useMemo(
@@ -276,11 +279,11 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const handleCreateFolder = useCallback(async () => {
     if (!folderFormName.trim()) return
     try {
-      const res = await fetch("/api/folders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: folderFormName.trim(), parentId: null }) })
+      const res = await fetch("/api/folders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: folderFormName.trim(), parentId: null, isFavorite: folderFormIsFavorite }) })
       if (res.ok) await refetchData()
     } catch { /* ignore */ }
-    setShowCreateFolder(false); setFolderFormName("")
-  }, [folderFormName, refetchData])
+    setShowCreateFolder(false); setFolderFormName(""); setFolderFormIsFavorite(false)
+  }, [folderFormName, folderFormIsFavorite, refetchData])
 
   const handleCreateBookmark = useCallback(async () => {
     if (!bmFormUrl.trim()) return
@@ -431,7 +434,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             <button onClick={() => toggleCollapse(f.id)} className="p-0.5 text-muted-foreground/60 hover:text-foreground">
               {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </button>
-            <FolderIcon className="h-4 w-4 shrink-0" style={{ color: FOLDER_ICON_COLOR(f.color) }} />
+            <FolderTypeIcon f={f} />
             <span className="text-sm text-muted-foreground">{f.name}</span>
             <span className="text-xs text-muted-foreground/40">{bms.length}</span>
             <button onClick={(e) => { e.stopPropagation(); openEditFolder(f) }} className="p-2 text-muted-foreground/30 opacity-100 hover:text-foreground" title="编辑">
@@ -496,7 +499,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
           ) : (
             <>
               <div className="group flex items-center gap-2 px-4 pt-3 pb-2" style={{ borderBottom: "1px solid var(--border)" }}>
-                <FolderIcon className="h-4 w-4 shrink-0" style={{ color: FOLDER_ICON_COLOR(card.data.color) }} />
+                <FolderTypeIcon f={card.data} />
                 <span className="text-sm font-semibold">{card.data.name}</span>
                 <button onClick={(e) => { e.stopPropagation(); openEditFolder(card.data) }} className="p-2 text-muted-foreground/30 opacity-100 hover:text-foreground" title="编辑">
                   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -580,7 +583,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
                 className={`flex w-full items-center gap-1 px-2 py-2 text-sm hover:bg-muted ${isSelected ? "bg-muted font-medium text-foreground" : "text-muted-foreground"}`}
                 style={{ paddingLeft: `${8 + depth * 14}px` }}>
                 {children.length > 0 ? (isExpanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />) : <span className="w-3" />}
-                <FolderIcon className="h-4 w-4 shrink-0" style={{ color: FOLDER_ICON_COLOR(f.color) }} />
+                <FolderTypeIcon f={f} />
                 <span className="truncate">{f.name}</span>
               </button>
               <button onClick={(e) => { e.stopPropagation(); openEditFolder(f) }} className="p-2 text-muted-foreground/30 opacity-100 hover:text-foreground" title="编辑">
@@ -862,14 +865,27 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
       </Dialog>
 
       {/* 创建文件夹 */}
-      <Dialog open={showCreateFolder} onOpenChange={(o) => { if (!o) { setShowCreateFolder(false); setFolderFormName("") } }} modal={false}>
+      <Dialog open={showCreateFolder} onOpenChange={(o) => { if (!o) { setShowCreateFolder(false); setFolderFormName(""); setFolderFormIsFavorite(false) } }} modal={false}>
         <DialogContent>
           <DialogHeader><DialogTitle>新建文件夹</DialogTitle><DialogDescription>输入文件夹名称</DialogDescription></DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid gap-2"><Label htmlFor="folderName">名称</Label><Input id="folderName" value={folderFormName} onChange={(e) => setFolderFormName(e.target.value)} placeholder="文件夹名称" onKeyDown={(e) => { if (e.key === "Enter") handleCreateFolder() }} /></div>
+            <div className="grid gap-2">
+              <Label>文件夹类型</Label>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setFolderFormIsFavorite(false)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-md border text-sm transition-colors ${!folderFormIsFavorite ? "border-primary bg-primary/5 text-primary font-medium" : "border-border hover:bg-muted text-muted-foreground"}`}>
+                  <FolderIcon className="h-4 w-4" /> 普通文件夹
+                </button>
+                <button type="button" onClick={() => setFolderFormIsFavorite(true)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-md border text-sm transition-colors ${folderFormIsFavorite ? "border-primary bg-primary/5 text-primary font-medium" : "border-border hover:bg-muted text-muted-foreground"}`}>
+                  <Star className="h-4 w-4" /> 收藏文件夹
+                </button>
+              </div>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowCreateFolder(false); setFolderFormName("") }}>取消</Button>
+            <Button variant="outline" onClick={() => { setShowCreateFolder(false); setFolderFormName(""); setFolderFormIsFavorite(false) }}>取消</Button>
             <Button onClick={handleCreateFolder} disabled={!folderFormName.trim()}>创建</Button>
           </DialogFooter>
         </DialogContent>
@@ -937,7 +953,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             {rootFolders.map((f) => (
               <button key={f.id} onClick={() => { moveMultipleBookmarks(Array.from(selectedBmIds), f.id); setShowMoveDialog(false) }}
                 className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-md transition-colors flex items-center gap-2">
-                <FolderIcon className="h-4 w-4 shrink-0" style={{ color: FOLDER_ICON_COLOR(f.color) }} />
+                <FolderTypeIcon f={f} />
                 <span>{f.name}</span>
               </button>
             ))}
@@ -989,7 +1005,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
                     <div className="space-y-1.5">
                       {statsData.folderStats.map((f) => (
                         <div key={f.id} className="flex items-center gap-2 rounded-md border px-3 py-2">
-                          <FolderIcon className="h-4 w-4 shrink-0" style={{ color: FOLDER_ICON_COLOR(f.color) }} />
+                          <FolderTypeIcon f={f} />
                           <span className="flex-1 text-sm truncate">{f.name}</span>
                           <span className="text-xs text-muted-foreground">{f.count} 个书签</span>
                         </div>

@@ -29,7 +29,7 @@ export async function GET() {
       prisma.bookmark.count({ where: { userId, createdAt: { gte: sevenDaysAgo } } }),
       prisma.bookmark.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 10, select: { id: true, title: true, url: true, favicon: true, createdAt: true } }),
       prisma.bookmark.findMany({ where: { userId, lastUsedAt: { not: null } }, orderBy: { lastUsedAt: 'desc' }, take: 10, select: { id: true, title: true, url: true, favicon: true, lastUsedAt: true } }),
-      prisma.folder.findMany({ where: { userId }, select: { id: true, name: true, color: true, _count: { select: { bookmarks: true } } } }),
+      prisma.folder.findMany({ where: { userId }, select: { id: true, name: true, color: true, isFavorite: true, _count: { select: { bookmarks: true } } } }),
     ])
 
     return NextResponse.json({
@@ -43,6 +43,7 @@ export async function GET() {
         id: f.id,
         name: f.name,
         color: f.color,
+        isFavorite: f.isFavorite,
         count: f._count.bookmarks
       }))
     })
