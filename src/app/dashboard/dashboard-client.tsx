@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef, useMemo } from "react"
+import { useState, useCallback, useRef, useMemo, useSyncExternalStore } from "react"
 import { signOut } from "next-auth/react"
 import { useTheme, themes } from "@/lib/theme"
 import {
@@ -59,6 +59,19 @@ function distributeIntoColumns<T>(items: T[], cols: number, getWeight: (item: T)
   }
   return result
 }
+// 卡片列数自适应：按视口宽度动态计算（与内容容器 max-w-[1600px] 配合）
+function computeCardCols(width: number): number {
+  if (width >= 1536) return 5
+  if (width >= 1200) return 4
+  if (width >= 1024) return 3
+  if (width >= 640) return 2
+  return 1
+}
+
+function subscribeCardCols(callback: () => void): () => void {
+  window.addEventListener("resize", callback)
+  return () => window.removeEventListener("resize", callback)
+}
 
 const DEAD_LINK_LABELS: Record<string, string> = {
   ENOTFOUND: "域名不存在", ECONNREFUSED: "连接被拒", ENETUNREACH: "网络不可达",
@@ -100,6 +113,12 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
   const [dedupLoading, setDedupLoading] = useState(false)
   const [collapsedSubFolders, setCollapsedSubFolders] = useState<Set<string>>(new Set())
   const [selectMode, setSelectMode] = useState(false)
+  // 卡片列数（响应式，SSR 期间固定 3 列）
+  const cardCols = useSyncExternalStore(
+    subscribeCardCols,
+    () => (typeof window === "undefined" ? 3 : computeCardCols(window.innerWidth)),
+    () => 3
+  )
   const [selectedBmIds, setSelectedBmIds] = useState<Set<string>>(new Set())
 
   const [showStats, setShowStats] = useState(false)
@@ -542,7 +561,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     }
 
     return (
-      <div className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
+      <div className="mx-auto max-w-[1600px] px-4 py-6 lg:px-8">
         {/* Web Search */}
         <div className="mb-4 flex items-center gap-2 py-2 px-3 bg-muted/30 rounded-lg mx-auto" style={{ border: "1px solid var(--border)", maxWidth: "520px" }}>
           <Globe className="h-4 w-4 text-muted-foreground/50 shrink-0" />
@@ -561,13 +580,8 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
           </button>
         </div>
         <div className="flex flex-col gap-4 px-3 py-4 sm:hidden">{allCards.map(renderCard)}</div>
-        <div className="hidden sm:grid lg:hidden grid-cols-2 gap-4 px-4 py-6">
-          {distributeIntoColumns(allCards, 2, getCardWeight).map((col, ci) => (
-            <div key={ci} className="flex flex-col gap-4">{col.map(renderCard)}</div>
-          ))}
-        </div>
-        <div className="hidden lg:grid grid-cols-3 gap-4 px-8 py-6">
-          {distributeIntoColumns(allCards, 3, getCardWeight).map((col, ci) => (
+        <div className="hidden sm:grid gap-4 px-4 py-6 lg:px-8" style={{ gridTemplateColumns: `repeat(${cardCols}, minmax(0, 1fr))` }}>
+          {distributeIntoColumns(allCards, cardCols, getCardWeight).map((col, ci) => (
             <div key={ci} className="flex flex-col gap-4">{col.map(renderCard)}</div>
           ))}
         </div>
