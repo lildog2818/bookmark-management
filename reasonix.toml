@@ -1,0 +1,6 @@
+﻿# Reasonix 项目级配置：覆盖全局沙箱根，允许工具写当前工作区
+config_version = 3
+
+[sandbox]
+workspace_root = "D:\\document\\Reasonix\\bookmark_management_web"
+bash = "off"
