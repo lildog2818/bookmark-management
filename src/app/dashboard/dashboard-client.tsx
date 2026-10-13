@@ -73,6 +73,24 @@ function subscribeCardCols(callback: () => void): () => void {
   return () => window.removeEventListener("resize", callback)
 }
 
+// 只放行 http/https；缺协议时补 https://；javascript:/data:/file: 等返回 null（渲染成不可点文本）
+function toSafeHref(raw: string | null | undefined): string | null {
+  const url = (raw || "").trim()
+  if (!url) return null
+  if (url.startsWith("//")) return `https:${url}`
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(url)) return /^https?:/i.test(url) ? url : null
+  return `https://${url}`
+}
+
+// "https://www.bing.com/search?q=" -> { action: "https://www.bing.com/search", param: "q" }
+// "https://www.baidu.com/s?wd="    -> { action: "https://www.baidu.com/s", param: "wd" }
+// 模板末尾不是 "key=" 形式时退回 { action: 原模板, param: "q" }
+function parseSearchTemplate(tpl: string): { action: string; param: string } {
+  const t = (tpl || "").trim()
+  const m = /^(.*[?&])([^?&=]+)=$/.exec(t)
+  return m ? { action: m[1].slice(0, -1), param: m[2] } : { action: t, param: "q" }
+}
+
 const DEAD_LINK_LABELS: Record<string, string> = {
   ENOTFOUND: "域名不存在", ECONNREFUSED: "连接被拒", ENETUNREACH: "网络不可达",
   "521": "521 源站宕机", "522": "522 连接超时", "523": "523 源站不可达",
@@ -379,13 +397,35 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
     try { await fetch("/api/folders/reorder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ folderIds: fIds }) }) } catch { /* ignore */ }
   }, [])
 
-  const handleWebSearch = useCallback((e: React.KeyboardEvent) => {
-    if (e.key !== "Enter" || !webQuery.trim()) return
-    const allEngines = { ...SEARCH_ENGINES }
+  // 当前网页搜索引擎（内置 + 自定义），以及原生 GET 表单所需的 action / 查询参数名
+  const webEngineUrl = useMemo(() => {
+    const allEngines: Record<string, { name: string; url: string }> = { ...SEARCH_ENGINES }
     for (const ce of customEngines) allEngines[ce.id] = { name: ce.name, url: ce.url }
-    const engine = allEngines[webEngine]
-    if (engine) { window.open(engine.url + encodeURIComponent(webQuery.trim()), "_blank", "noopener,noreferrer"); setWebQuery("") }
-  }, [webQuery, webEngine, customEngines])
+    return allEngines[webEngine]?.url || SEARCH_ENGINES.bing.url
+  }, [webEngine, customEngines])
+
+  const { action: searchAction, param: searchParam } = useMemo(() => parseSearchTemplate(webEngineUrl), [webEngineUrl])
+
+  // 回车/点击放大镜都交给浏览器原生 GET 表单提交（顶层导航，不受弹出窗口拦截影响）；
+  // 只在提交开始之后清空输入框，避免清空发生在表单序列化之前。
+  const handleWebSearchSubmit = useCallback(() => {
+    setTimeout(() => setWebQuery(""), 0)
+  }, [])
+
+  // 记录最近访问并把该书签置顶（卡片视图行、树视图卡片共用）
+  const markBookmarkUsed = useCallback((id: string) => {
+    fetch("/api/bookmarks/touch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setBookmarks((prev) => {
+          const arr = [...prev]
+          const idx = arr.findIndex((x) => x.id === id)
+          if (idx >= 0) { const [item] = arr.splice(idx, 1); arr.unshift(item) }
+          return arr
+        })
+      })
+      .catch(() => {})
+  }, [])
 
   // ── 拖拽辅助 ──
   const dragProps = useCallback((folderId: string) => ({
@@ -425,11 +465,11 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
       })
       draggedBmRef.current = null; setDragOverFolderId(null)
     }
-    const handleClick = () => {
-      if (selectMode) return
-      fetch("/api/bookmarks/touch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: bm.id }) })
-        .then((r) => r.json()).then((d) => { if (d.success) setBookmarks((prev) => { const arr = [...prev]; const idx = arr.findIndex((x) => x.id === bm.id); if (idx >= 0) { const [item] = arr.splice(idx, 1); arr.unshift(item) } return arr }) }).catch(() => {})
-      window.open(bm.url, "_blank", "noopener,noreferrer")
+    const href = toSafeHref(bm.url)
+    const rowLabel = <span className="truncate text-sm font-medium">{bm.title || bm.url}</span>
+    const activate = (e: React.MouseEvent) => {
+      if (selectMode) { e.preventDefault(); return }
+      markBookmarkUsed(bm.id)
     }
 
     return (
@@ -438,13 +478,20 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
           <input type="checkbox" checked={isSel} onChange={() => setSelectedBmIds((prev) => { const n = new Set(prev); n.has(bm.id) ? n.delete(bm.id) : n.add(bm.id); return n })}
             className="mr-2 shrink-0 accent-primary" />
         )}
-        <div
-          {...(!selectMode ? { draggable: true, onDragStart: handleDragStart, onDragOver: (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = "move" }, onDrop: handleRowDrop, onDragEnd: handleDragEnd } : {})}
-          className="flex flex-1 cursor-pointer items-center min-w-0"
-          onClick={handleClick}
-        >
-          <span className="truncate text-sm font-medium">{bm.title || bm.url}</span>
-        </div>
+        {href ? (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            {...(!selectMode ? { draggable: true, onDragStart: handleDragStart, onDragOver: (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = "move" }, onDrop: handleRowDrop, onDragEnd: handleDragEnd } : {})}
+            className="flex flex-1 cursor-pointer items-center min-w-0 text-inherit no-underline"
+            onClick={activate}
+          >
+            {rowLabel}
+          </a>
+        ) : (
+          <div className="flex flex-1 items-center min-w-0">{rowLabel}</div>
+        )}
         {!selectMode && (<>
           <button onClick={(e) => { e.stopPropagation(); openEditBookmark(bm) }} className="shrink-0 p-2 text-muted-foreground/40 bm-actions sm:opacity-0 sm:group-hover:opacity-100 hover:text-foreground">
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -562,11 +609,18 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
 
     return (
       <div className="mx-auto max-w-[1600px] px-4 py-6 lg:px-8">
-        {/* Web Search */}
+        {/* Web Search：原生 GET 表单提交到新标签页，不依赖 window.open */}
         <div className="mb-4 flex items-center gap-2 py-2 px-3 bg-muted/30 rounded-lg mx-auto" style={{ border: "1px solid var(--border)", maxWidth: "520px" }}>
           <Globe className="h-4 w-4 text-muted-foreground/50 shrink-0" />
-          <input type="text" value={webQuery} onChange={(e) => setWebQuery(e.target.value)} onKeyDown={handleWebSearch}
-            placeholder="搜索网页..." className="flex-1 bg-transparent px-2 py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground/70" />
+          <form action={searchAction} method="GET" target="_blank" rel="noopener noreferrer" onSubmit={handleWebSearchSubmit}
+            className="flex flex-1 items-center gap-1 min-w-0">
+            <input type="text" name={searchParam} value={webQuery} onChange={(e) => setWebQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && (e.nativeEvent.isComposing || e.keyCode === 229)) e.preventDefault() }}
+              placeholder="搜索网页..." className="flex-1 min-w-0 bg-transparent px-2 py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground/70" />
+            <button type="submit" title="搜索网页" className="shrink-0 text-muted-foreground/50 hover:text-foreground p-1">
+              <Search className="h-3.5 w-3.5" />
+            </button>
+          </form>
           <Select value={webEngine} onValueChange={(v) => setWebEngine(v || "bing")}>
             <SelectTrigger size="sm" className="bg-muted/50 border-0 text-xs text-foreground h-7 min-w-[52px] gap-0.5 shrink-0"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -575,7 +629,7 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
               {customEngines.map((e) => (<SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>))}
             </SelectContent>
           </Select>
-          <button onClick={() => setShowAddEngine(true)} className="text-muted-foreground/40 hover:text-foreground p-1 shrink-0" title="添加搜索引擎">
+          <button type="button" onClick={() => setShowAddEngine(true)} className="text-muted-foreground/40 hover:text-foreground p-1 shrink-0" title="添加搜索引擎">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
           </button>
         </div>
@@ -682,35 +736,42 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
                 </button>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {display.map((bm) => (
-                  <div key={bm.id} draggable
-                    onDragStart={() => { draggedBmRef.current = bm.id }}
-                    onDragEnd={() => { draggedBmRef.current = null; setDragOverFolderId(null) }}
-                    onClick={() => {
-                      if (selectMode) return
-                      fetch("/api/bookmarks/touch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: bm.id }) })
-                        .then((r) => r.json()).then((d) => { if (d.success) setBookmarks((prev) => { const arr = [...prev]; const idx = arr.findIndex((x) => x.id === bm.id); if (idx >= 0) { const [item] = arr.splice(idx, 1); arr.unshift(item) } return arr }) }).catch(() => {})
-                      window.open(bm.url, "_blank", "noopener,noreferrer")
-                    }}
-                    className="group relative cursor-pointer bg-card p-4 hover:bg-muted/30 cursor-grab active:cursor-grabbing"
-                    style={{ border: "1px solid var(--border)" }}>
-                    <div className="flex items-start gap-3">
-                      {bm.favicon ? <img src={bm.favicon} alt="" className="mt-0.5 h-5 w-5" /> : <Bookmark className="mt-0.5 h-5 w-5 shrink-0 text-primary/60" />}
-                      <div className="min-w-0 flex-1">
-                        <h3 className="truncate text-sm font-medium">{bm.title || bm.url}</h3>
-                        <p className="mt-0.5 truncate text-xs text-muted-foreground">{bm.url}</p>
+                {display.map((bm) => {
+                  const href = toSafeHref(bm.url)
+                  return (
+                    <div key={bm.id} draggable
+                      onDragStart={() => { draggedBmRef.current = bm.id }}
+                      onDragEnd={() => { draggedBmRef.current = null; setDragOverFolderId(null) }}
+                      className="group relative cursor-pointer bg-card p-4 hover:bg-muted/30 cursor-grab active:cursor-grabbing"
+                      style={{ border: "1px solid var(--border)" }}>
+                      {href && (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={bm.title || bm.url}
+                          onClick={(e) => { if (selectMode) { e.preventDefault(); return } markBookmarkUsed(bm.id) }}
+                          className="absolute inset-0"
+                        />
+                      )}
+                      <div className="flex items-start gap-3">
+                        {bm.favicon ? <img src={bm.favicon} alt="" className="mt-0.5 h-5 w-5" /> : <Bookmark className="mt-0.5 h-5 w-5 shrink-0 text-primary/60" />}
+                        <div className="min-w-0 flex-1">
+                          <h3 className="truncate text-sm font-medium">{bm.title || bm.url}</h3>
+                          <p className="mt-0.5 truncate text-xs text-muted-foreground">{bm.url}</p>
+                        </div>
+                      </div>
+                      <div className="absolute right-2 top-2 z-10 flex gap-1">
+                        <button onClick={(e) => { e.stopPropagation(); openEditBookmark(bm) }} className="p-2 text-muted-foreground/30 bm-actions sm:opacity-0 sm:group-hover:opacity-100 hover:text-foreground">
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteBookmark(bm.id, e) }} className="p-2 text-muted-foreground/30 bm-actions sm:opacity-0 sm:group-hover:opacity-100 hover:text-destructive">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                     </div>
-                    <div className="absolute right-2 top-2 flex gap-1">
-                      <button onClick={(e) => { e.stopPropagation(); openEditBookmark(bm) }} className="p-2 text-muted-foreground/30 bm-actions sm:opacity-0 sm:group-hover:opacity-100 hover:text-foreground">
-                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDeleteBookmark(bm.id, e) }} className="p-2 text-muted-foreground/30 bm-actions sm:opacity-0 sm:group-hover:opacity-100 hover:text-destructive">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
@@ -1076,13 +1137,18 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
                   <div>
                     <h3 className="mb-2 text-sm font-semibold">最近添加</h3>
                     <div className="space-y-1">
-                      {statsData.latestBookmarks.map((bm) => (
-                        <a key={bm.id} href={bm.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted transition-colors">
+                      {statsData.latestBookmarks.map((bm) => {
+                        const href = toSafeHref(bm.url)
+                        const rowClass = "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted transition-colors"
+                        const inner = (<>
                           {bm.favicon ? <img src={bm.favicon} alt="" className="h-4 w-4 shrink-0" /> : <Bookmark className="h-4 w-4 shrink-0 text-muted-foreground/50" />}
                           <span className="flex-1 truncate">{bm.title || bm.url}</span>
                           <span className="text-xs text-muted-foreground">{new Date(bm.createdAt).toLocaleDateString("zh-CN")}</span>
-                        </a>
-                      ))}
+                        </>)
+                        return href
+                          ? <a key={bm.id} href={href} target="_blank" rel="noopener noreferrer" className={rowClass}>{inner}</a>
+                          : <div key={bm.id} className={rowClass}>{inner}</div>
+                      })}
                     </div>
                   </div>
                 )}
@@ -1090,13 +1156,18 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
                   <div>
                     <h3 className="mb-2 text-sm font-semibold">最近访问</h3>
                     <div className="space-y-1">
-                      {statsData.mostVisitedBookmarks.map((bm) => (
-                        <a key={bm.id} href={bm.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted transition-colors">
+                      {statsData.mostVisitedBookmarks.map((bm) => {
+                        const href = toSafeHref(bm.url)
+                        const rowClass = "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted transition-colors"
+                        const inner = (<>
                           {bm.favicon ? <img src={bm.favicon} alt="" className="h-4 w-4 shrink-0" /> : <Bookmark className="h-4 w-4 shrink-0 text-muted-foreground/50" />}
                           <span className="flex-1 truncate">{bm.title || bm.url}</span>
                           <span className="text-xs text-muted-foreground">{new Date(bm.lastUsedAt).toLocaleDateString("zh-CN")}</span>
-                        </a>
-                      ))}
+                        </>)
+                        return href
+                          ? <a key={bm.id} href={href} target="_blank" rel="noopener noreferrer" className={rowClass}>{inner}</a>
+                          : <div key={bm.id} className={rowClass}>{inner}</div>
+                      })}
                     </div>
                   </div>
                 )}
@@ -1121,13 +1192,18 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
             ) : (
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground mb-3">发现 {deadLinks.length} 个失效链接</p>
-                {deadLinks.map((link) => (
+                {deadLinks.map((link) => {
+                  const href = toSafeHref(link.url)
+                  const inner = (<>
+                    <p className="text-sm font-medium truncate">{link.title || link.url}</p>
+                    <p className="text-xs text-muted-foreground truncate hover:text-primary">{link.url}</p>
+                  </>)
+                  return (
                   <div key={link.id} className="flex items-center gap-2 rounded-md border p-3">
                     <Link2Off className="h-4 w-4 shrink-0 text-destructive" />
-                    <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 hover:text-primary transition-colors">
-                      <p className="text-sm font-medium truncate">{link.title || link.url}</p>
-                      <p className="text-xs text-muted-foreground truncate hover:text-primary">{link.url}</p>
-                    </a>
+                    {href
+                      ? <a href={href} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 hover:text-primary transition-colors">{inner}</a>
+                      : <div className="flex-1 min-w-0">{inner}</div>}
                     <span className="shrink-0 text-xs text-destructive">{DEAD_LINK_LABELS[String(link.status)] || String(link.status)}</span>
                     <Button variant="ghost" size="sm" onClick={async () => {
                       try {
@@ -1137,7 +1213,8 @@ export function DashboardClient({ folders: initialFolders, bookmarks: initialBoo
                       } catch { /* ignore */ }
                     }}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
